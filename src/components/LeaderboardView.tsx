@@ -1,6 +1,14 @@
 import { ArrowLeft, ChevronDown, Eye, HelpCircle, X } from "lucide-react";
 
-export function LeaderboardView({ onBack, onClose }: { onBack: () => void; onClose: () => void }) {
+export function LeaderboardView({
+  onBack,
+  onClose,
+  livePnL = -66318.4,
+}: {
+  onBack: () => void;
+  onClose: () => void;
+  livePnL?: number;
+}) {
   const leaders = [
     { rank: 1, flag: "🇺🇾", name: "Nahuel Casana", amount: "$30,000.00+" },
     { rank: 2, flag: "🇧🇩", name: "Stone shooter", amount: "$30,000.00+" },
@@ -14,6 +22,8 @@ export function LeaderboardView({ onBack, onClose }: { onBack: () => void; onClo
     { rank: 10, flag: "🇸🇴", name: "#94011571", amount: "$20,880.50" },
     { rank: 11, flag: "🇧🇩", name: "Trader Tahsin (BD KING❤️)", amount: "$20,377.28" },
   ];
+
+  const formattedPnL = `${livePnL >= 0 ? "+" : ""}${livePnL.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}$`;
 
   return (
     <div className="mobile-view-wrapper">
@@ -32,7 +42,9 @@ export function LeaderboardView({ onBack, onClose }: { onBack: () => void; onClo
             <span>🇵🇰</span>
             <b className="text-sm text-white">TEST TRADER LLC</b>
           </div>
-          <b className="text-red-500 font-bold text-sm">66,318.40$</b>
+          <b className={`font-bold text-sm ${livePnL >= 0 ? "text-green-500" : "text-red-500"}`}>
+            {formattedPnL}
+          </b>
         </div>
         <div className="text-xs text-muted-foreground -mt-2 mb-3">Your position: <b className="text-white">100+</b></div>
 
