@@ -3,7 +3,6 @@ import {
   ArrowDown,
   ArrowRight,
   ArrowUp,
-  BarChart3,
   Bell,
   Briefcase,
   BriefcaseBusiness,
@@ -15,10 +14,7 @@ import {
   Clock3,
   Compass,
   Eye,
-  GraduationCap,
-  Headphones,
   Image as ImageIcon,
-  LayoutGrid,
   LineChart,
   Lock,
   LogOut,
@@ -51,6 +47,28 @@ import {
   type ButtonHTMLAttributes,
   type ReactNode,
 } from "react";
+import {
+  ChartTypePopover,
+  DrawingsModal,
+  IndicatorsModal,
+  KeltnerConfigModal,
+  TimeframePopover,
+} from "../components/ChartToolsModals";
+import {
+  DepositAmountModal,
+  DepositModal,
+  DepositPaymentModal,
+} from "../components/DepositModals";
+import {
+  AnalyticsView,
+  LeaderboardView,
+} from "../components/LeaderboardView";
+import {
+  ALL_PAIRS,
+  TradePairModal,
+  type PairItem,
+} from "../components/TradePairModal";
+import { MobileWithdrawalView } from "../components/WithdrawalView";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -59,13 +77,13 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "TRADEX live web trading interface for AUD/NZD OTC markets simulation.",
+          "TRADEX live web trading interface for OTC markets simulation.",
       },
       { property: "og:title", content: "TRADEX — Web Trading Platform" },
       {
         property: "og:description",
         content:
-          "TRADEX live web trading interface for AUD/NZD OTC markets simulation.",
+          "TRADEX live web trading interface for OTC markets simulation.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -73,64 +91,6 @@ export const Route = createFileRoute("/")({
   }),
   component: TradingScreen,
 });
-
-/* ---------------- Available Currency Pairs ---------------- */
-export const PAIRS = [
-  {
-    id: "usd-cop",
-    flags: ["🇺🇸", "🇨🇴"],
-    name: "USD/COP...",
-    fullName: "USD/COP (OTC)",
-    rate: 0.89,
-    basePrice: 4210.5,
-    decimals: 2,
-  },
-  {
-    id: "usd-dzd",
-    flags: ["🇺🇸", "🇩🇿"],
-    name: "USD/DZD (OTC)",
-    fullName: "USD/DZD (OTC)",
-    rate: 0.77,
-    basePrice: 134.2,
-    decimals: 2,
-  },
-  {
-    id: "gbp-cad",
-    flags: ["🇬🇧", "🇨🇦"],
-    name: "GBP/CAD...",
-    fullName: "GBP/CAD (OTC)",
-    rate: 0.83,
-    basePrice: 1.782,
-    decimals: 4,
-  },
-  {
-    id: "nzd-jpy",
-    flags: ["🇳🇿", "🇯🇵"],
-    name: "NZD/JPY (OTC)",
-    fullName: "NZD/JPY (OTC)",
-    rate: 0.77,
-    basePrice: 91.45,
-    decimals: 2,
-  },
-  {
-    id: "usd-idr",
-    flags: ["🇺🇸", "🇮🇩"],
-    name: "USD/IDR (OTC)",
-    fullName: "USD/IDR (OTC)",
-    rate: 0.86,
-    basePrice: 15820.0,
-    decimals: 1,
-  },
-  {
-    id: "aud-nzd",
-    flags: ["🇦🇺", "🇳🇿"],
-    name: "AUD/NZD...",
-    fullName: "AUD/NZD (OTC)",
-    rate: 0.79,
-    basePrice: 1.17134,
-    decimals: 5,
-  },
-] as const;
 
 /* ---------------- Mock Payments Transactions (Screenshots 4 & 12) ---------------- */
 const PAYMENTS_DATA = [
@@ -194,37 +154,19 @@ const PAYMENTS_DATA = [
 
 /* ---------------- Timer Presets (Screenshots 1 & 7) ---------------- */
 const TIMER_PRESETS_DESKTOP = [
-  "00:05",
-  "00:10",
-  "00:15",
-  "00:30",
-  "01:00",
-  "02:00",
-  "05:00",
-  "10:00",
-  "15:00",
-  "30:00",
-  "01:00:00",
-  "02:00:00",
+  "00:05", "00:10", "00:15", "00:30",
+  "01:00", "02:00", "05:00", "10:00",
+  "15:00", "30:00", "01:00:00", "02:00:00",
   "04:00:00",
 ];
 
 const TIMER_PRESETS_MOBILE = [
-  "00:05",
-  "00:10",
-  "00:15",
-  "00:30",
-  "01:00",
-  "02:00",
-  "05:00",
-  "10:00",
-  "15:00",
-  "30:00",
-  "01:00:00",
-  "02:00:00",
+  "00:05", "00:10", "00:15", "00:30",
+  "01:00", "02:00", "05:00", "10:00",
+  "15:00", "30:00", "01:00:00", "02:00:00",
 ];
 
-/* ---------------- Market & Trading State ---------------- */
+/* ---------------- Types & Helpers ---------------- */
 type Candle = { id: number; o: number; h: number; l: number; c: number };
 type Trade = {
   id: number;
@@ -241,7 +183,14 @@ type Trade = {
 };
 
 type ViewScreen =
-  "trading" | "account" | "payments" | "withdrawal" | "help" | "more";
+  | "trading"
+  | "account"
+  | "payments"
+  | "withdrawal"
+  | "help"
+  | "more"
+  | "leaderboard"
+  | "analytics";
 
 const CANDLE_MS = 6000;
 
@@ -258,7 +207,7 @@ function generateCandles(basePrice: number, decimals: number): Candle[] {
   const out: Candle[] = [];
   const scale = Math.pow(10, -Math.min(decimals, 4)) * 2;
   let p = basePrice;
-  for (let i = 0; i < 35; i++) {
+  for (let i = 0; i < 40; i++) {
     const o = p;
     const c = o + (r() - 0.5) * scale;
     const h = Math.max(o, c) + r() * (scale * 0.4);
@@ -278,38 +227,55 @@ const fmtMoney = (n: number) =>
     maximumFractionDigits: 2,
   });
 
+/* ---------------- Hook: State Management ---------------- */
 function useTradingState() {
   const [currentView, setCurrentView] = useState<ViewScreen>("trading");
-  const [activePairIndex, setActivePairIndex] = useState(5); // Default to AUD/NZD
-  const activePair = PAIRS[activePairIndex] ?? PAIRS[5]!;
+  const [selectedPair, setSelectedPair] = useState<PairItem>(ALL_PAIRS[10]!); // Default AUD/NZD (OTC)
 
   const [candles, setCandles] = useState<Candle[]>(() =>
-    generateCandles(activePair.basePrice, activePair.decimals),
+    generateCandles(selectedPair.basePrice, selectedPair.decimals)
   );
   const [now, setNow] = useState<number | null>(null);
   const [account, setAccount] = useState<"live" | "demo">("live");
-  const [balances, setBalances] = useState({ live: 31626.4, demo: 5000.0 });
+  const [balances, setBalances] = useState({ live: 31681.6, demo: 5000.0 });
 
   // Stake configuration & switch ($ vs %)
   const [stakeMode, setStakeMode] = useState<"dollar" | "percent">("dollar");
-  const [stakeDollars, setStakeDollars] = useState(60);
+  const [stakeDollars, setStakeDollars] = useState(5);
   const [stakePercent, setStakePercent] = useState(1);
 
   // Time configuration & switch (clock vs timer duration)
   const [timeMode, setTimeMode] = useState<"clock" | "timer">("timer");
-  const [selectedTimerPreset, setSelectedTimerPreset] = useState("01:00");
-  const [minutes, setMinutes] = useState(1); // expiration duration in minutes
+  const [selectedTimerPreset, setSelectedTimerPreset] = useState("00:05");
+  const [minutes, setMinutes] = useState(0.083);
   const [timerPopoverOpen, setTimerPopoverOpen] = useState(false);
 
   // Pending trade toggle
   const [pendingTrade, setPendingTrade] = useState(true);
 
+  // Modals & Overlays
+  const [tradePairModalOpen, setTradePairModalOpen] = useState(false);
+  const [depositModalStep, setDepositModalStep] = useState<"none" | "methods" | "amount" | "payment">("none");
+  const [depositMethod, setDepositMethod] = useState("USDT (TRC-20)");
+  const [depositAmount, setDepositAmount] = useState(100);
+
+  // Chart Tool Modals
+  const [chartToolsExpanded, setChartToolsExpanded] = useState(false);
+  const [timeframePopoverOpen, setTimeframePopoverOpen] = useState(false);
+  const [selectedTimeframe, setSelectedTimeframe] = useState("1m");
+  const [chartTypePopoverOpen, setChartTypePopoverOpen] = useState(false);
+  const [selectedChartType, setSelectedChartType] = useState("Candles");
+  const [indicatorsModalOpen, setIndicatorsModalOpen] = useState(false);
+  const [keltnerConfigOpen, setKeltnerConfigOpen] = useState(false);
+  const [keltnerActive, setKeltnerActive] = useState(false);
+  const [drawingsModalOpen, setDrawingsModalOpen] = useState(false);
+
   // Desktop & mobile overlays
   const [desktopMoreOpen, setDesktopMoreOpen] = useState(false);
   const [mobileTradesOpen, setMobileTradesOpen] = useState(false);
 
-  // Chart zoom level
-  const [visibleCount, setVisibleCount] = useState(20);
+  // Chart zoom level (pinch-to-zoom & wheel zoom)
+  const [visibleCount, setVisibleCount] = useState(18);
 
   const [trades, setTrades] = useState<Trade[]>([
     {
@@ -317,9 +283,9 @@ function useTradingState() {
       dir: "up",
       pairName: "AUD/NZD (OTC)",
       candleId: 10,
-      entry: 1.1698,
+      entry: 1.1654,
       stake: 60,
-      rate: 0.79,
+      rate: 0.92,
       expiresAt: Date.now() - 30000,
       status: "won",
       profit: 55.2,
@@ -330,9 +296,9 @@ function useTradingState() {
       dir: "down",
       pairName: "AUD/NZD (OTC)",
       candleId: 14,
-      entry: 1.171,
+      entry: 1.1662,
       stake: 60,
-      rate: 0.79,
+      rate: 0.92,
       expiresAt: Date.now() - 15000,
       status: "won",
       profit: 54.6,
@@ -343,9 +309,9 @@ function useTradingState() {
       dir: "down",
       pairName: "AUD/NZD (OTC)",
       candleId: 18,
-      entry: 1.1702,
+      entry: 1.1658,
       stake: 60,
-      rate: 0.79,
+      rate: 0.92,
       expiresAt: Date.now() + 85000,
       status: "open",
       profit: 0,
@@ -359,8 +325,8 @@ function useTradingState() {
 
   // Switch pair candles when active pair changes
   useEffect(() => {
-    setCandles(generateCandles(activePair.basePrice, activePair.decimals));
-  }, [activePairIndex]);
+    setCandles(generateCandles(selectedPair.basePrice, selectedPair.decimals));
+  }, [selectedPair]);
 
   // Real-time market tick generator
   useEffect(() => {
@@ -383,7 +349,7 @@ function useTradingState() {
         if (ts >= nextCandleAt.current) {
           nextCandleAt.current = ts + CANDLE_MS;
           list.push({ id: last.id + 1, o: c, h: c, l: c, c });
-          if (list.length > 70) list.shift();
+          if (list.length > 80) list.shift();
         }
         return list;
       });
@@ -440,11 +406,11 @@ function useTradingState() {
         {
           id: Date.now(),
           dir,
-          pairName: activePair.fullName,
+          pairName: selectedPair.name,
           candleId: last.id,
           entry: last.c,
           stake: effectiveStake,
-          rate: activePair.rate,
+          rate: selectedPair.profit1m / 100,
           expiresAt,
           status: "open",
           profit: 0,
@@ -453,7 +419,7 @@ function useTradingState() {
         ...ts,
       ]);
     },
-    [account, activePair, balances, effectiveStake, minutes, now],
+    [account, selectedPair, balances, effectiveStake, minutes, now]
   );
 
   const toggleStakeMode = useCallback(() => {
@@ -469,29 +435,54 @@ function useTradingState() {
   }, []);
 
   const zoomIn = useCallback(() => {
-    setVisibleCount((c) => Math.max(12, c - 4));
+    setVisibleCount((c) => Math.max(8, c - 3));
   }, []);
 
   const zoomOut = useCallback(() => {
-    setVisibleCount((c) => Math.min(36, c + 4));
+    setVisibleCount((c) => Math.min(50, c + 3));
   }, []);
 
   const currentPrice = candles.length
     ? candles[candles.length - 1]!.c
-    : activePair.basePrice;
+    : selectedPair.basePrice;
 
   return {
     currentView,
     setCurrentView,
+    selectedPair,
+    setSelectedPair,
+    tradePairModalOpen,
+    setTradePairModalOpen,
+    depositModalStep,
+    setDepositModalStep,
+    depositMethod,
+    setDepositMethod,
+    depositAmount,
+    setDepositAmount,
+    chartToolsExpanded,
+    setChartToolsExpanded,
+    timeframePopoverOpen,
+    setTimeframePopoverOpen,
+    selectedTimeframe,
+    setSelectedTimeframe,
+    chartTypePopoverOpen,
+    setChartTypePopoverOpen,
+    selectedChartType,
+    setSelectedChartType,
+    indicatorsModalOpen,
+    setIndicatorsModalOpen,
+    keltnerConfigOpen,
+    setKeltnerConfigOpen,
+    keltnerActive,
+    setKeltnerActive,
+    drawingsModalOpen,
+    setDrawingsModalOpen,
     candles,
     now,
     account,
     setAccount,
     balances,
     setBalances,
-    activePairIndex,
-    setActivePairIndex,
-    activePair,
     stakeMode,
     toggleStakeMode,
     stakeDollars,
@@ -515,6 +506,7 @@ function useTradingState() {
     mobileTradesOpen,
     setMobileTradesOpen,
     visibleCount,
+    setVisibleCount,
     zoomIn,
     zoomOut,
     trades,
@@ -529,76 +521,21 @@ const Ctx = createContext<TradingState | null>(null);
 const useT = () => useContext(Ctx)!;
 
 /* ---------------- Reusable UI Elements ---------------- */
-type ScreenButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  children: ReactNode;
-};
-
-function ScreenButton({
-  children,
-  className = "",
-  ...props
-}: ScreenButtonProps) {
-  return (
-    <button className={className} {...props}>
-      {children}
-    </button>
-  );
+function ScreenButton({ children, className = "", ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { children: ReactNode }) {
+  return <button className={className} {...props}>{children}</button>;
 }
 
-function PairFlags({
-  flags = ["🇦🇺", "🇳🇿"],
-  compact = false,
-}: {
-  flags?: readonly [string, string];
-  compact?: boolean;
-}) {
-  return (
-    <span
-      className={compact ? "tab-flags compact" : "tab-flags"}
-      aria-hidden="true"
-    >
-      <span>{flags[0]}</span>
-      <span>{flags[1]}</span>
-    </span>
-  );
-}
-
-/* ---------------- Bull Trader Official Avatar (Screenshots 3 & 9) ---------------- */
 function BullAvatar() {
   return (
     <div className="bull-avatar">
       <svg viewBox="0 0 100 100" className="w-14 h-14" fill="none">
         <circle cx="50" cy="50" r="46" fill="#090d16" />
-        <path
-          d="M26 38 C32 26 40 22 48 30 C56 22 64 26 70 38 C64 42 60 48 58 56 C54 62 46 62 42 56 C40 48 36 42 26 38 Z"
-          fill="#38bdf8"
-          opacity="0.9"
-        />
+        <path d="M26 38 C32 26 40 22 48 30 C56 22 64 26 70 38 C64 42 60 48 58 56 C54 62 46 62 42 56 C40 48 36 42 26 38 Z" fill="#38bdf8" opacity="0.9" />
         <path d="M35 44 L42 42 L40 48 Z" fill="#fff" />
         <path d="M65 44 L58 42 L60 48 Z" fill="#fff" />
         <path d="M46 52 L50 55 L54 52 Z" fill="#0284c7" />
-        <text
-          x="50"
-          y="74"
-          textAnchor="middle"
-          fill="#38bdf8"
-          fontSize="6.5"
-          fontWeight="900"
-          letterSpacing="0.05em"
-        >
-          BULL TRADER
-        </text>
-        <text
-          x="50"
-          y="82"
-          textAnchor="middle"
-          fill="#94a3b8"
-          fontSize="5"
-          fontWeight="700"
-          letterSpacing="0.08em"
-        >
-          OFFICIAL
-        </text>
+        <text x="50" y="74" textAnchor="middle" fill="#38bdf8" fontSize="6.5" fontWeight="900" letterSpacing="0.05em">TEST TRADER</text>
+        <text x="50" y="82" textAnchor="middle" fill="#94a3b8" fontSize="5" fontWeight="700" letterSpacing="0.08em">OFFICIAL</text>
       </svg>
     </div>
   );
@@ -625,16 +562,11 @@ function AccountMenu({ onClose }: { onClose: () => void }) {
         <div className="am-info">
           <b>trader.demo@test.com</b>
           <span>ID: 10482910</span>
-          <p>
-            Currency: <b>USD</b> <em>CHANGE</em>
-          </p>
+          <p>Currency: <b>USD</b> <em>CHANGE</em></p>
         </div>
         <button
           className={`am-account ${account === "live" ? "on" : ""}`}
-          onClick={() => {
-            setAccount("live");
-            onClose();
-          }}
+          onClick={() => { setAccount("live"); onClose(); }}
         >
           <i className="radio" />
           <div>
@@ -646,10 +578,7 @@ function AccountMenu({ onClose }: { onClose: () => void }) {
         </button>
         <button
           className={`am-account ${account === "demo" ? "on" : ""}`}
-          onClick={() => {
-            setAccount("demo");
-            onClose();
-          }}
+          onClick={() => { setAccount("demo"); onClose(); }}
         >
           <i className="radio" />
           <div>
@@ -671,51 +600,13 @@ function AccountMenu({ onClose }: { onClose: () => void }) {
         </button>
       </div>
       <nav className="account-menu-links">
-        <span
-          onClick={() => {
-            setCurrentView("withdrawal");
-            onClose();
-          }}
-        >
-          Deposit
-        </span>
-        <span
-          onClick={() => {
-            setCurrentView("withdrawal");
-            onClose();
-          }}
-        >
-          Withdrawal
-        </span>
-        <span
-          onClick={() => {
-            setCurrentView("payments");
-            onClose();
-          }}
-        >
-          Payments
-        </span>
-        <span
-          onClick={() => {
-            setCurrentView("trading");
-            onClose();
-          }}
-        >
-          Trades
-        </span>
-        <span
-          onClick={() => {
-            setCurrentView("account");
-            onClose();
-          }}
-        >
-          My account
-        </span>
+        <span onClick={() => { setCurrentView("withdrawal"); onClose(); }}>Deposit</span>
+        <span onClick={() => { setCurrentView("withdrawal"); onClose(); }}>Withdrawal</span>
+        <span onClick={() => { setCurrentView("payments"); onClose(); }}>Payments</span>
+        <span onClick={() => { setCurrentView("trading"); onClose(); }}>Trades</span>
+        <span onClick={() => { setCurrentView("account"); onClose(); }}>My account</span>
         <hr />
-        <span className="logout" onClick={onClose}>
-          <LogOut size={16} />
-          Logout
-        </span>
+        <span className="logout" onClick={onClose}><LogOut size={16} /> Logout</span>
       </nav>
     </div>
   );
@@ -732,22 +623,12 @@ function AccountBlock({ mobile = false }: { mobile?: boolean }) {
     return () => window.removeEventListener("click", close);
   }, [open]);
 
-  const label =
-    account === "live"
-      ? mobile
-        ? "LIVE"
-        : "LIVE ACCOUNT"
-      : mobile
-        ? "DEMO"
-        : "DEMO ACCOUNT";
+  const label = account === "live" ? (mobile ? "LIVE" : "LIVE ACCOUNT") : (mobile ? "DEMO" : "DEMO ACCOUNT");
 
   return (
     <div
       className={`${mobile ? "account account-mobile" : "account"} ${account === "demo" ? "is-demo" : ""}`}
-      onClick={(e) => {
-        e.stopPropagation();
-        setOpen((o) => !o);
-      }}
+      onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
       role="button"
       tabIndex={0}
       aria-label="Account selector"
@@ -774,15 +655,10 @@ function NotificationBadge() {
 
 /* ---------------- Desktop Header ---------------- */
 function DesktopHeader() {
-  const { setCurrentView } = useT();
+  const { setCurrentView, setDepositModalStep } = useT();
   return (
     <header className="desktop-header">
-      <div
-        className="brand"
-        onClick={() => setCurrentView("trading")}
-        role="button"
-        tabIndex={0}
-      >
+      <div className="brand" onClick={() => setCurrentView("trading")} role="button" tabIndex={0}>
         <span className="brand-mark">◫</span>
         <b>TRADEX</b>
         <i />
@@ -791,17 +667,11 @@ function DesktopHeader() {
       <div className="header-actions">
         <NotificationBadge />
         <AccountBlock />
-        <ScreenButton
-          className="deposit"
-          onClick={() => setCurrentView("withdrawal")}
-        >
+        <ScreenButton className="deposit" onClick={() => setDepositModalStep("methods")}>
           <Plus size={18} />
           Deposit
         </ScreenButton>
-        <ScreenButton
-          className="withdraw"
-          onClick={() => setCurrentView("withdrawal")}
-        >
+        <ScreenButton className="withdraw" onClick={() => setCurrentView("withdrawal")}>
           Withdrawal
         </ScreenButton>
       </div>
@@ -817,20 +687,16 @@ function DesktopMoreMenu({ onClose }: { onClose: () => void }) {
     <div className="desktop-more-menu" onClick={(e) => e.stopPropagation()}>
       <div className="desktop-more-header">
         <span>More</span>
-        <X
-          size={18}
-          className="cursor-pointer text-muted-foreground hover:text-white"
-          onClick={onClose}
-        />
+        <X size={18} className="cursor-pointer text-muted-foreground hover:text-white" onClick={onClose} />
       </div>
 
-      <button className="desktop-more-item" onClick={onClose}>
+      <button className="desktop-more-item" onClick={() => { setCurrentView("analytics"); onClose(); }}>
         <PieChart size={18} />
         <span>Analytics</span>
         <ChevronRight size={16} />
       </button>
 
-      <button className="desktop-more-item" onClick={onClose}>
+      <button className="desktop-more-item" onClick={() => { setCurrentView("leaderboard"); onClose(); }}>
         <Briefcase size={18} />
         <span>TOP</span>
         <ChevronRight size={16} />
@@ -842,13 +708,7 @@ function DesktopMoreMenu({ onClose }: { onClose: () => void }) {
         <ChevronRight size={16} />
       </button>
 
-      <button
-        className="desktop-more-item"
-        onClick={() => {
-          setCurrentView("account");
-          onClose();
-        }}
-      >
+      <button className="desktop-more-item" onClick={() => { setCurrentView("account"); onClose(); }}>
         <UserRound size={18} />
         <span>Account</span>
         <ChevronRight size={16} />
@@ -873,14 +733,11 @@ function DesktopMoreMenu({ onClose }: { onClose: () => void }) {
 
 /* ---------------- Desktop Sidebar Rail ---------------- */
 function DesktopSidebar() {
-  const { currentView, setCurrentView, desktopMoreOpen, setDesktopMoreOpen } =
-    useT();
+  const { currentView, setCurrentView, desktopMoreOpen, setDesktopMoreOpen } = useT();
 
   return (
     <aside className="desktop-sidebar">
-      <span>
-        <Menu size={22} className="side-menu" />
-      </span>
+      <span><Menu size={22} className="side-menu" /></span>
       <ScreenButton
         className={currentView === "trading" ? "side-active" : "side-icon"}
         aria-label="Chart"
@@ -888,106 +745,55 @@ function DesktopSidebar() {
       >
         <ImageIcon size={20} />
       </ScreenButton>
-      <div
-        className={currentView === "help" ? "side-active" : "side-icon"}
-        onClick={() => setCurrentView("help")}
-      >
+      <div className={currentView === "help" ? "side-active" : "side-icon"} onClick={() => setCurrentView("help")}>
         <CircleHelp size={20} />
       </div>
-      <div
-        className={currentView === "account" ? "side-active" : "side-icon"}
-        onClick={() => setCurrentView("account")}
-      >
+      <div className={currentView === "account" ? "side-active" : "side-icon"} onClick={() => setCurrentView("account")}>
         <UserRound size={20} />
       </div>
-      <span className="badge-icon side-icon">
-        <Trophy size={20} />
-        <b>4</b>
-      </span>
-      <span className="badge-icon side-icon">
-        <span className="coin">$</span>
-        <b>2</b>
-      </span>
-      <div
-        className={`side-icon ${desktopMoreOpen ? "text-white" : ""}`}
-        onClick={() => setDesktopMoreOpen((o) => !o)}
-      >
+      <span className="badge-icon side-icon"><Trophy size={20} /><b>4</b></span>
+      <span className="badge-icon side-icon"><span className="coin">$</span><b>2</b></span>
+      <div className={`side-icon ${desktopMoreOpen ? "text-white" : ""}`} onClick={() => setDesktopMoreOpen((o) => !o)}>
         <MoreHorizontal size={22} />
       </div>
-      {desktopMoreOpen && (
-        <DesktopMoreMenu onClose={() => setDesktopMoreOpen(false)} />
-      )}
+      {desktopMoreOpen && <DesktopMoreMenu onClose={() => setDesktopMoreOpen(false)} />}
       <div className="sidebar-spacer" />
       <div className="utility">
-        <span>
-          <Maximize size={16} />
-        </span>
+        <span><Maximize size={16} /></span>
         <span>➜</span>
       </div>
       <div className="utility">
-        <span>
-          <Settings size={17} />
-        </span>
-        <span>
-          <Volume2 size={18} />
-        </span>
+        <span><Settings size={17} /></span>
+        <span><Volume2 size={18} /></span>
       </div>
-      <div className="join">
-        <MessageSquare size={14} />
-        <b>JOIN US</b>
-      </div>
-      <div className="help" onClick={() => setCurrentView("help")}>
-        <span>●</span>Help
-      </div>
+      <div className="join"><MessageSquare size={14} /><b>JOIN US</b></div>
+      <div className="help" onClick={() => setCurrentView("help")}><span>●</span>Help</div>
     </aside>
   );
 }
 
 /* ---------------- Pair Tabs (Interactive Pair Switcher) ---------------- */
 function PairTabs() {
-  const { activePairIndex, setActivePairIndex } = useT();
+  const { selectedPair, setSelectedPair, setTradePairModalOpen } = useT();
 
   return (
     <div className="pair-tabs">
-      <ScreenButton className="add-pair">
+      <ScreenButton className="add-pair" onClick={() => setTradePairModalOpen(true)}>
         <Plus size={18} />
       </ScreenButton>
-      {PAIRS.map((pair, index) => {
-        const isSelected = index === activePairIndex;
-        return (
-          <div
-            className={`pair-tab ${isSelected ? "selected" : ""}`}
-            key={pair.id}
-            onClick={() => setActivePairIndex(index)}
-            role="button"
-            tabIndex={0}
-          >
-            <PairFlags flags={pair.flags} />
-            <div>
-              <b>{pair.name}</b>
-              <strong>{Math.round(pair.rate * 100)}%</strong>
-            </div>
-            {isSelected && (
-              <>
-                <ChevronDown size={13} />
-                <span
-                  className="tab-close"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
-                >
-                  ×
-                </span>
-              </>
-            )}
-          </div>
-        );
-      })}
+      <div className="pair-tab selected" onClick={() => setTradePairModalOpen(true)} role="button" tabIndex={0}>
+        <span className="tab-flags"><span>{selectedPair.flags[0]}</span><span>{selectedPair.flags[1]}</span></span>
+        <div>
+          <b>{selectedPair.name.slice(0, 8)}...</b>
+          <strong>{selectedPair.profit1m}%</strong>
+        </div>
+        <ChevronDown size={13} />
+      </div>
     </div>
   );
 }
 
-/* ---------------- Candlestick Chart ---------------- */
+/* ---------------- Candlestick Chart (Pinch-to-zoom & Gestures) ---------------- */
 function ChartGrid({ mobile = false }: { mobile?: boolean }) {
   const {
     candles,
@@ -996,15 +802,69 @@ function ChartGrid({ mobile = false }: { mobile?: boolean }) {
     price,
     nextCandleAt,
     account,
-    activePair,
+    selectedPair,
     visibleCount,
+    setVisibleCount,
     zoomIn,
     zoomOut,
     mobileTradesOpen,
     setMobileTradesOpen,
+    chartToolsExpanded,
+    setChartToolsExpanded,
+    timeframePopoverOpen,
+    setTimeframePopoverOpen,
+    selectedTimeframe,
+    setSelectedTimeframe,
+    chartTypePopoverOpen,
+    setChartTypePopoverOpen,
+    selectedChartType,
+    setSelectedChartType,
+    setIndicatorsModalOpen,
+    keltnerActive,
+    setKeltnerActive,
+    setDrawingsModalOpen,
   } = useT();
 
-  const count = mobile ? Math.min(13, visibleCount) : visibleCount;
+  // Gesture Pinch Zoom Handling
+  const chartRef = useRef<HTMLDivElement>(null);
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0]!.clientX - e.touches[1]!.clientX;
+      const dy = e.touches[0]!.clientY - e.touches[1]!.clientY;
+      touchDist.current = Math.hypot(dx, dy);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && touchDist.current !== null) {
+      const dx = e.touches[0]!.clientX - e.touches[1]!.clientX;
+      const dy = e.touches[0]!.clientY - e.touches[1]!.clientY;
+      const dist = Math.hypot(dx, dy);
+      const diff = dist - touchDist.current;
+      if (Math.abs(diff) > 8) {
+        if (diff > 0) {
+          setVisibleCount((c) => Math.max(6, c - 1)); // Pinch out = zoom in (fewer, bigger candles)
+        } else {
+          setVisibleCount((c) => Math.min(55, c + 1)); // Pinch in = zoom out (more, smaller candles)
+        }
+        touchDist.current = dist;
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    touchDist.current = null;
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    if (e.deltaY < 0) {
+      zoomIn();
+    } else {
+      zoomOut();
+    }
+  };
+
+  const count = Math.max(6, Math.min(55, visibleCount));
   const visible = candles.slice(-count);
   const firstId = visible.length ? visible[0]!.id : 0;
 
@@ -1023,68 +883,81 @@ function ChartGrid({ mobile = false }: { mobile?: boolean }) {
   }, [visible]);
 
   const frac = (p: number) => Math.min(1, Math.max(0, (max - p) / range));
-  const yCss = (f: number) =>
-    `calc(${insetTop}px + (100% - ${insetTop + insetBottom}px) * ${f})`;
+  const yCss = (f: number) => `calc(${insetTop}px + (100% - ${insetTop + insetBottom}px) * ${f})`;
 
   const step = 100 / count;
   const highest = Math.max(...visible.map((c) => c.h));
   const lowest = Math.min(...visible.map((c) => c.l));
 
-  const openTrade = trades.find(
-    (t) => t.status === "open" && t.account === account,
-  );
-  const remaining =
-    now === null
-      ? 0
-      : Math.max(
-          0,
-          Math.ceil(
-            ((openTrade ? openTrade.expiresAt : nextCandleAt) - now) / 1000,
-          ),
-        );
+  const openTrade = trades.find((t) => t.status === "open" && t.account === account);
+  const remaining = now === null ? 0 : Math.max(0, Math.ceil(((openTrade ? openTrade.expiresAt : nextCandleAt) - now) / 1000));
   const countdown = `${pad(Math.floor(remaining / 60))}:${pad(remaining % 60)}`;
-  const clock =
-    now === null ? (mobile ? "21:07:06" : "19:54:41") : fmtClock(new Date(now));
+  const clock = now === null ? (mobile ? "21:43:30" : "19:54:41") : fmtClock(new Date(now));
 
-  const markers = trades.filter(
-    (t) =>
-      t.account === account && t.candleId >= firstId && t.status === "open",
-  );
-
-  const priceFormatted = price.toFixed(activePair.decimals);
+  const markers = trades.filter((t) => t.account === account && t.candleId >= firstId && t.status === "open");
+  const priceFormatted = price.toFixed(selectedPair.decimals);
   const labelCount = mobile ? 5 : 7;
 
   return (
-    <div className={mobile ? "chart-grid mobile-chart" : "chart-grid"}>
+    <div
+      ref={chartRef}
+      className={mobile ? "chart-grid mobile-chart" : "chart-grid"}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
+      onWheel={handleWheel}
+    >
       <div className="grid-lines" />
 
       {/* Captions */}
-      <div className="trade-caption start">
-        ◀<span>Beginning of trade</span>
-      </div>
-      <div className="trade-caption end">
-        ◀
-        <span>
-          End of trade
-          <br />
-          {countdown}
-        </span>
-      </div>
+      <div className="trade-caption start">◀<span>Beginning of trade</span></div>
+      <div className="trade-caption end">◀<span>End of trade<br />{countdown}</span></div>
 
       {/* Clock & Info */}
-      <div className="market-time">
-        <span>●</span> {clock} <i>UTC+5</i>
-      </div>
-      {!mobile && (
-        <div className="pair-info">
-          <b>i</b> PAIR INFORMATION
-        </div>
-      )}
-      {mobile && <div className="info-dot">i</div>}
+      <div className="market-time"><span>●</span> {clock} <i>UTC+5</i></div>
+      {!mobile ? <div className="pair-info"><b>i</b> PAIR INFORMATION</div> : <div className="info-dot">i</div>}
 
       {/* High and Low Badges */}
-      <span className="high-label">{highest.toFixed(activePair.decimals)}</span>
-      <span className="low-label">{lowest.toFixed(activePair.decimals)}</span>
+      <span className="high-label">{highest.toFixed(selectedPair.decimals)}</span>
+      <span className="low-label">{lowest.toFixed(selectedPair.decimals)}</span>
+
+      {/* Keltner Channel Overlay (Screenshot 18) */}
+      {keltnerActive && (
+        <>
+          <div className="keltner-pill-badge">
+            <ChevronRight size={12} className="rotate-180" />
+            <Eye size={12} />
+            <span>KELTNER CHANNEL</span>
+            <div className="w-2.5 h-2.5 rounded bg-red-500" />
+            <div className="w-2.5 h-2.5 rounded bg-red-500" />
+            <div className="w-2.5 h-2.5 rounded bg-green-500" />
+            <span>20 10</span>
+            <Pencil size={11} className="cursor-pointer" />
+            <X size={11} className="cursor-pointer text-red-400" onClick={() => setKeltnerActive(false)} />
+          </div>
+          <svg className="keltner-line-svg">
+            <path
+              d={visible.map((c, i) => `${i === 0 ? "M" : "L"} ${(i + 0.5) * (100 / count)}% ${frac(c.h + 0.0002) * 100}%`).join(" ")}
+              fill="none"
+              stroke="#22c55e"
+              strokeWidth="1.5"
+            />
+            <path
+              d={visible.map((c, i) => `${i === 0 ? "M" : "L"} ${(i + 0.5) * (100 / count)}% ${frac((c.h + c.l) / 2) * 100}%`).join(" ")}
+              fill="none"
+              stroke="#ef4444"
+              strokeWidth="1"
+            />
+            <path
+              d={visible.map((c, i) => `${i === 0 ? "M" : "L"} ${(i + 0.5) * (100 / count)}% ${frac(c.l - 0.0002) * 100}%`).join(" ")}
+              fill="none"
+              stroke="#ef4444"
+              strokeWidth="1.5"
+            />
+          </svg>
+        </>
+      )}
 
       {/* Candlesticks & Entry Markers */}
       <div className="candles">
@@ -1093,10 +966,11 @@ function ChartGrid({ mobile = false }: { mobile?: boolean }) {
           const bottom = frac(c.l) * 100;
           const bTop = frac(Math.max(c.o, c.c)) * 100;
           const bBot = frac(Math.min(c.o, c.c)) * 100;
+          const candleW = Math.max(3, Math.min(mobile ? 14 : 10, step * 0.72));
           return (
             <div
               className={`candle ${c.c >= c.o ? "up" : "down"}`}
-              style={{ left: `${index * step}%` }}
+              style={{ left: `${index * step}%`, width: `${candleW}%` }}
               key={c.id}
             >
               <i style={{ top: `${top}%`, height: `${bottom - top}%` }} />
@@ -1116,13 +990,7 @@ function ChartGrid({ mobile = false }: { mobile?: boolean }) {
                 top: `${frac(t.entry) * 100}%`,
               }}
             >
-              <span>
-                {t.dir === "up" ? (
-                  <ArrowUp size={10} strokeWidth={3} />
-                ) : (
-                  <ArrowDown size={10} strokeWidth={3} />
-                )}
-              </span>
+              <span>{t.dir === "up" ? <ArrowUp size={10} strokeWidth={3} /> : <ArrowDown size={10} strokeWidth={3} />}</span>
               <i />
               <em>${t.stake}</em>
             </div>
@@ -1139,146 +1007,131 @@ function ChartGrid({ mobile = false }: { mobile?: boolean }) {
         <b>{priceFormatted}</b>
       </div>
 
-      {/* Price Alert Tag */}
-      {!mobile && (
-        <div className="alert-marker" style={{ top: yCss(0.68) }}>
-          <Bell size={11} />
-          <span>{(price * 0.9992).toFixed(activePair.decimals)}</span>
-        </div>
-      )}
-
       {/* Y-Axis Price Labels */}
       {Array.from({ length: labelCount }, (_, k) => {
         const f = (k + 0.5) / labelCount;
         const p = max - f * range;
         return (
           <span className="price-label" style={{ top: yCss(f) }} key={k}>
-            {p.toFixed(activePair.decimals)}
+            {p.toFixed(selectedPair.decimals)}
           </span>
         );
       })}
 
+      {/* Zoom In / Zoom Out Controls */}
+      <div className="chart-zoom">
+        <button onClick={zoomIn} aria-label="Zoom in">+</button>
+        <button onClick={zoomOut} aria-label="Zoom out">−</button>
+      </div>
+
       {/* X-Axis Timestamps */}
       <div className="x-labels">
         {(mobile
-          ? ["21:00", "21:04", "21:08", "21:12", "21:16"]
-          : [
-              "19:28",
-              "19:32",
-              "19:36",
-              "19:40",
-              "19:44",
-              "19:48",
-              "19:52",
-              "20:00",
-              "20:04",
-              "20:08",
-              "20:12",
-              "20:16",
-            ]
+          ? ["21:24", "21:32", "21:40", "21:48"]
+          : ["19:28", "19:32", "19:36", "19:40", "19:44", "19:48", "19:52", "20:00", "20:04", "20:08", "20:12", "20:16"]
         ).map((time, idx) => (
-          <span
-            key={time}
-            className={idx === 10 && !mobile ? "current-time-pill" : ""}
-          >
-            {time}
-          </span>
+          <span key={time} className={idx === 10 && !mobile ? "current-time-pill" : ""}>{time}</span>
         ))}
       </div>
 
-      {/* Left Floating Tools */}
-      {!mobile && (
-        <div className="chart-tools">
-          <button>
-            <Pencil size={15} />
-          </button>
-          <button className="active">1m</button>
-          <button>
-            <LineChart size={15} />
-          </button>
-          <button>
-            <Compass size={15} />
-          </button>
-        </div>
-      )}
+      {/* Floating Chart Left Tool Rails (Screenshots 13 - 21) */}
+      <div className="chart-tool-rail">
+        <button
+          className={`chart-tool-btn ${chartToolsExpanded ? "active" : ""}`}
+          onClick={() => setChartToolsExpanded((o) => !o)}
+        >
+          {chartToolsExpanded ? <X size={14} /> : "•••"}
+        </button>
 
-      {/* Floating Zoom Buttons */}
-      {!mobile && (
-        <div className="chart-zoom">
-          <button onClick={zoomOut}>
-            <Minus size={13} />
-          </button>
-          <button onClick={zoomIn}>
-            <Plus size={13} />
-          </button>
-        </div>
-      )}
+        {chartToolsExpanded && (
+          <>
+            <button className="chart-tool-btn" onClick={() => setDrawingsModalOpen(true)}>
+              <Pencil size={15} />
+            </button>
+            <button
+              className="chart-tool-btn white-active"
+              onClick={() => setTimeframePopoverOpen((o) => !o)}
+            >
+              {selectedTimeframe}
+            </button>
+            <button
+              className="chart-tool-btn"
+              onClick={() => setChartTypePopoverOpen((o) => !o)}
+            >
+              🕯️
+            </button>
+            <button
+              className="chart-tool-btn"
+              onClick={() => setIndicatorsModalOpen(true)}
+            >
+              📐
+            </button>
+          </>
+        )}
 
-      {/* Mobile Floating Tools (Screenshot 6: Briefcase button) */}
-      {mobile && (
-        <div className="mobile-tools">
-          <button>•••</button>
-          <span
-            className="cursor-pointer"
+        {/* Mobile Briefcase button */}
+        {mobile && !chartToolsExpanded && (
+          <button
+            className="chart-tool-btn active relative"
             onClick={() => setMobileTradesOpen((o) => !o)}
           >
             <BriefcaseBusiness size={16} />
-            {mobileTradesOpen ? (
-              <b className="bg-red-500">
-                <X size={10} />
-              </b>
-            ) : (
-              <b>{trades.filter((t) => t.status === "open").length}</b>
-            )}
-          </span>
-        </div>
+            <b className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-blue-500 text-[10px] grid place-items-center">
+              {trades.filter((t) => t.status === "open").length}
+            </b>
+          </button>
+        )}
+      </div>
+
+      {/* Timeframe Popover */}
+      {timeframePopoverOpen && (
+        <TimeframePopover
+          current={selectedTimeframe}
+          onSelect={(tf) => {
+            setSelectedTimeframe(tf);
+            setTimeframePopoverOpen(false);
+          }}
+        />
       )}
 
-      {/* Mobile Trades Sheet Drawer (Screenshot 6) */}
+      {/* Chart Type Popover */}
+      {chartTypePopoverOpen && (
+        <ChartTypePopover
+          current={selectedChartType}
+          onSelect={(ct) => {
+            setSelectedChartType(ct);
+            setChartTypePopoverOpen(false);
+          }}
+        />
+      )}
+
+      {/* Mobile Trades Sheet Drawer */}
       {mobile && mobileTradesOpen && (
         <div className="mobile-trades-drawer">
           <div className="trades-head">
             <div className="flex items-center gap-4">
-              <span className="font-bold text-white text-xs border-b-2 border-blue-500 pb-1">
-                Trades 0
-              </span>
-              <span className="flex items-center gap-1 text-muted-foreground text-xs pb-1">
-                <Clock3 size={13} /> 0
-              </span>
+              <span className="font-bold text-white text-xs border-b-2 border-blue-500 pb-1">Trades 0</span>
+              <span className="flex items-center gap-1 text-muted-foreground text-xs pb-1"><Clock3 size={13} /> 0</span>
             </div>
-            <X
-              size={16}
-              className="text-muted-foreground cursor-pointer"
-              onClick={() => setMobileTradesOpen(false)}
-            />
+            <X size={16} className="text-muted-foreground cursor-pointer" onClick={() => setMobileTradesOpen(false)} />
           </div>
-          <div className="trade-date">
-            4 OCTOBER <i>6</i>
-          </div>
+          <div className="trade-date">4 OCTOBER <i>6</i></div>
           {trades.map((t) => (
             <div className="trade-item" key={t.id}>
               <div className="trade-row">
                 <ChevronDown size={14} />
-                <PairFlags flags={["🇦🇺", "🇳🇿"]} compact />
-                <b>AUD/NZD (OTC)</b>
+                <span>{selectedPair.flags[0]}{selectedPair.flags[1]}</span>
+                <b>{selectedPair.name}</b>
                 <span>00:01:25</span>
               </div>
               <div className={`trade-result ${t.dir}`}>
-                <span>
-                  {t.dir === "up" ? "↑" : "↓"} {t.stake} $
-                </span>
-                <b className={t.status === "won" ? "won" : ""}>
-                  {t.status === "won" ? "+115.20 $" : "+114.60 $"}
-                </b>
+                <span>{t.dir === "up" ? "↑" : "↓"} {t.stake} $</span>
+                <b className={t.status === "won" ? "won" : ""}>{t.status === "won" ? "+115.20 $" : "+114.60 $"}</b>
               </div>
             </div>
           ))}
           <div className="text-center pt-2">
-            <ChevronUp
-              size={16}
-              className="mx-auto text-muted-foreground cursor-pointer"
-              onClick={() => setMobileTradesOpen(false)}
-            />
+            <ChevronUp size={16} className="mx-auto text-muted-foreground cursor-pointer" onClick={() => setMobileTradesOpen(false)} />
           </div>
         </div>
       )}
@@ -1286,22 +1139,9 @@ function ChartGrid({ mobile = false }: { mobile?: boolean }) {
   );
 }
 
-/* ---------------- Timer Presets Popover (Screenshots 1 & 7) ---------------- */
-function TimerPresetsPopover({
-  mobile = false,
-  onClose,
-}: {
-  mobile?: boolean;
-  onClose: () => void;
-}) {
-  const {
-    timeMode,
-    setTimeMode,
-    selectedTimerPreset,
-    setSelectedTimerPreset,
-    setMinutes,
-  } = useT();
-
+/* ---------------- Timer Presets Popover ---------------- */
+function TimerPresetsPopover({ mobile = false, onClose }: { mobile?: boolean; onClose: () => void }) {
+  const { timeMode, setTimeMode, selectedTimerPreset, setSelectedTimerPreset, setMinutes } = useT();
   const presets = mobile ? TIMER_PRESETS_MOBILE : TIMER_PRESETS_DESKTOP;
 
   const handleSelect = (val: string) => {
@@ -1325,118 +1165,59 @@ function TimerPresetsPopover({
   return (
     <div className="timer-popover" onClick={(e) => e.stopPropagation()}>
       <div className="timer-tabs">
-        <button
-          className={`timer-tab ${timeMode === "timer" ? "active" : ""}`}
-          onClick={() => setTimeMode("timer")}
-        >
-          TIMER
-        </button>
-        <button
-          className={`timer-tab ${timeMode === "clock" ? "active" : ""}`}
-          onClick={() => setTimeMode("clock")}
-        >
-          TIME
-        </button>
+        <button className={`timer-tab ${timeMode === "timer" ? "active" : ""}`} onClick={() => setTimeMode("timer")}>TIMER</button>
+        <button className={`timer-tab ${timeMode === "clock" ? "active" : ""}`} onClick={() => setTimeMode("clock")}>TIME</button>
       </div>
 
       <div className={`timer-grid ${mobile ? "" : "grid-4"}`}>
         {presets.map((p) => (
-          <button
-            key={p}
-            className={`timer-pill ${selectedTimerPreset === p ? "active" : ""}`}
-            onClick={() => handleSelect(p)}
-          >
+          <button key={p} className={`timer-pill ${selectedTimerPreset === p ? "active" : ""}`} onClick={() => handleSelect(p)}>
             {p}
           </button>
         ))}
       </div>
 
-      <button className="timer-manual-btn" onClick={onClose}>
-        Set manually
-      </button>
+      <button className="timer-manual-btn" onClick={onClose}>Set manually</button>
     </div>
   );
 }
 
-/* ---------------- Investment Box with Working SWITCH ---------------- */
+/* ---------------- Stake & Time Boxes ---------------- */
 function StakeBox({ mobile = false }: { mobile?: boolean }) {
-  const {
-    stakeMode,
-    toggleStakeMode,
-    stakeDollars,
-    setStakeDollars,
-    stakePercent,
-    setStakePercent,
-  } = useT();
+  const { stakeMode, toggleStakeMode, stakeDollars, setStakeDollars, stakePercent, setStakePercent } = useT();
 
   const handleDecrease = () => {
-    if (stakeMode === "dollar") {
-      setStakeDollars((s) => Math.max(1, s - 10));
-    } else {
-      setStakePercent((p) => Math.max(1, p - 1));
-    }
+    if (stakeMode === "dollar") setStakeDollars((s) => Math.max(1, s - 5));
+    else setStakePercent((p) => Math.max(1, p - 1));
   };
 
   const handleIncrease = () => {
-    if (stakeMode === "dollar") {
-      setStakeDollars((s) => Math.min(10000, s + 10));
-    } else {
-      setStakePercent((p) => Math.min(50, p + 1));
-    }
+    if (stakeMode === "dollar") setStakeDollars((s) => Math.min(10000, s + 5));
+    else setStakePercent((p) => Math.min(50, p + 1));
   };
 
-  const displayText =
-    stakeMode === "dollar" ? `${stakeDollars} $` : `${stakePercent} %`;
+  const displayText = stakeMode === "dollar" ? `${stakeDollars} $` : `${stakePercent} %`;
 
   return (
     <div className={mobile ? "stake-box mobile" : "stake-box"}>
       <span className="field-label">Investment</span>
-      <ScreenButton aria-label="Decrease investment" onClick={handleDecrease}>
-        <Minus size={mobile ? 13 : 15} />
-      </ScreenButton>
+      <ScreenButton aria-label="Decrease investment" onClick={handleDecrease}><Minus size={mobile ? 13 : 15} /></ScreenButton>
       <strong>{displayText}</strong>
-      <ScreenButton aria-label="Increase investment" onClick={handleIncrease}>
-        <Plus size={mobile ? 14 : 16} />
-      </ScreenButton>
-      <span
-        className="switch-link"
-        onClick={toggleStakeMode}
-        role="button"
-        tabIndex={0}
-      >
-        SWITCH
-      </span>
+      <ScreenButton aria-label="Increase investment" onClick={handleIncrease}><Plus size={mobile ? 14 : 16} /></ScreenButton>
+      <span className="switch-link" onClick={toggleStakeMode} role="button" tabIndex={0}>SWITCH</span>
     </div>
   );
 }
 
-/* ---------------- Time Box with Working SWITCH TIME (Screenshots 1 & 7) ---------------- */
 function TimeBox({ mobile = false }: { mobile?: boolean }) {
-  const {
-    now,
-    minutes,
-    setMinutes,
-    timeMode,
-    toggleTimeMode,
-    selectedTimerPreset,
-    timerPopoverOpen,
-    setTimerPopoverOpen,
-  } = useT();
+  const { now, minutes, setMinutes, timeMode, toggleTimeMode, selectedTimerPreset, timerPopoverOpen, setTimerPopoverOpen } = useT();
 
-  const handleDecrease = () => {
-    setMinutes((m) => Math.max(1, m - 1));
-  };
-
-  const handleIncrease = () => {
-    setMinutes((m) => Math.min(60, m + 1));
-  };
+  const handleDecrease = () => setMinutes((m) => Math.max(0.083, m - 1));
+  const handleIncrease = () => setMinutes((m) => Math.min(60, m + 1));
 
   const timeDisplay = useMemo(() => {
     if (timeMode === "timer") {
-      return selectedTimerPreset.includes(":") &&
-        selectedTimerPreset.split(":").length === 3
-        ? selectedTimerPreset
-        : `00:${selectedTimerPreset}`;
+      return selectedTimerPreset.includes(":") && selectedTimerPreset.split(":").length === 3 ? selectedTimerPreset : `00:${selectedTimerPreset}`;
     }
     if (now === null) return mobile ? "19:10" : "19:56";
     const d = new Date(now + minutes * 60000);
@@ -1444,72 +1225,29 @@ function TimeBox({ mobile = false }: { mobile?: boolean }) {
   }, [timeMode, selectedTimerPreset, minutes, now, mobile]);
 
   return (
-    <div
-      className={mobile ? "time-box mobile relative" : "time-box relative"}
-      onClick={() => setTimerPopoverOpen((o) => !o)}
-    >
-      <span className="field-label">
-        {timeMode === "timer" ? "Timer" : "Time"}
-      </span>
-      <ScreenButton
-        aria-label="Decrease time"
-        onClick={(e) => {
-          e.stopPropagation();
-          handleDecrease();
-        }}
-      >
-        <Minus size={mobile ? 13 : 15} />
-      </ScreenButton>
+    <div className={mobile ? "time-box mobile relative" : "time-box relative"} onClick={() => setTimerPopoverOpen((o) => !o)}>
+      <span className="field-label">{timeMode === "timer" ? "Timer" : "Time"}</span>
+      <ScreenButton aria-label="Decrease time" onClick={(e) => { e.stopPropagation(); handleDecrease(); }}><Minus size={mobile ? 13 : 15} /></ScreenButton>
       <strong>{timeDisplay}</strong>
-      <ScreenButton
-        aria-label="Increase time"
-        onClick={(e) => {
-          e.stopPropagation();
-          handleIncrease();
-        }}
-      >
-        <Plus size={mobile ? 14 : 16} />
-      </ScreenButton>
-      <span
-        className="switch-link"
-        onClick={(e) => {
-          e.stopPropagation();
-          toggleTimeMode();
-        }}
-        role="button"
-        tabIndex={0}
-      >
-        SWITCH TIME
-      </span>
-
-      {timerPopoverOpen && (
-        <TimerPresetsPopover
-          mobile={mobile}
-          onClose={() => setTimerPopoverOpen(false)}
-        />
-      )}
+      <ScreenButton aria-label="Increase time" onClick={(e) => { e.stopPropagation(); handleIncrease(); }}><Plus size={mobile ? 14 : 16} /></ScreenButton>
+      <span className="switch-link" onClick={(e) => { e.stopPropagation(); toggleTimeMode(); }} role="button" tabIndex={0}>SWITCH TIME</span>
+      {timerPopoverOpen && <TimerPresetsPopover mobile={mobile} onClose={() => setTimerPopoverOpen(false)} />}
     </div>
   );
 }
 
-/* ---------------- Action Buttons (Buy & Sell with Circular Arrows) ---------------- */
 function ActionButtons() {
   const { placeTrade } = useT();
   return (
     <div className="trade-actions">
-      <ScreenButton className="buy" onClick={() => placeTrade("up")}>
-        Buy <span>↑</span>
-      </ScreenButton>
-      <ScreenButton className="sell" onClick={() => placeTrade("down")}>
-        Sell <span>↓</span>
-      </ScreenButton>
+      <ScreenButton className="buy" onClick={() => placeTrade("up")}>Buy <span>↑</span></ScreenButton>
+      <ScreenButton className="sell" onClick={() => placeTrade("down")}>Sell <span>↓</span></ScreenButton>
     </div>
   );
 }
 
-/* ---------------- Trades History Panel (Screenshot 1) ---------------- */
 function TradesList() {
-  const { trades, account, now } = useT();
+  const { trades, account, now, selectedPair } = useT();
   const list = trades.filter((t) => t.account === account);
   const openCount = list.filter((t) => t.status === "open").length;
 
@@ -1523,40 +1261,23 @@ function TradesList() {
       </div>
 
       <div className="trades-scroll">
-        <div className="trade-date">
-          4 OCTOBER <i>6</i>
-        </div>
-
+        <div className="trade-date">4 OCTOBER <i>6</i></div>
         {list.map((t) => {
-          const rem =
-            now === null
-              ? 0
-              : Math.max(0, Math.ceil((t.expiresAt - now) / 1000));
+          const rem = now === null ? 0 : Math.max(0, Math.ceil((t.expiresAt - now) / 1000));
           const isPending = t.status === "open";
-          const timerStr = isPending
-            ? `00:${pad(Math.floor(rem / 60))}:${pad(rem % 60)}`
-            : "00:00:00";
+          const timerStr = isPending ? `00:${pad(Math.floor(rem / 60))}:${pad(rem % 60)}` : "00:00:00";
 
           return (
             <div className="trade-item" key={t.id}>
               <div className="trade-row">
                 <ChevronDown size={14} />
-                <PairFlags flags={["🇦🇺", "🇳🇿"]} compact />
+                <span>{selectedPair.flags[0]}{selectedPair.flags[1]}</span>
                 <b>{t.pairName.slice(0, 11)}...</b>
                 <span>{timerStr}</span>
               </div>
               <div className={`trade-result ${t.dir}`}>
-                <span>
-                  {t.dir === "up" ? "↑" : "↓"} {t.stake} $
-                </span>
-                <b className={t.status === "won" ? "won" : ""}>
-                  {t.status === "won"
-                    ? `+${fmtMoney(t.stake * (1 + t.rate))}`
-                    : t.status === "lost"
-                      ? "0.00"
-                      : `${fmtMoney(t.stake)}`}{" "}
-                  $
-                </b>
+                <span>{t.dir === "up" ? "↑" : "↓"} {t.stake} $</span>
+                <b className={t.status === "won" ? "won" : ""}>{t.status === "won" ? `+${fmtMoney(t.stake * (1 + t.rate))}` : t.status === "lost" ? "0.00" : `${fmtMoney(t.stake)}`} $</b>
               </div>
             </div>
           );
@@ -1566,104 +1287,68 @@ function TradesList() {
   );
 }
 
-/* ---------------- Desktop Trade Control Panel ---------------- */
 function TradePanel() {
-  const { activePair, effectiveStake, pendingTrade, togglePendingTrade } =
-    useT();
-  const payout = `${fmtMoney(effectiveStake * (1 + activePair.rate))} $`;
+  const { selectedPair, effectiveStake, pendingTrade, togglePendingTrade, setTradePairModalOpen } = useT();
+  const payout = `${fmtMoney(effectiveStake * (1 + selectedPair.profit1m / 100))} $`;
 
   return (
     <aside className="right-column">
       <section className="trade-panel">
-        <div className="panel-pair">
-          <PairFlags flags={activePair.flags} />
-          <b>{activePair.fullName}</b>
-          <strong>{Math.round(activePair.rate * 100)}%</strong>
+        <div className="panel-pair cursor-pointer" onClick={() => setTradePairModalOpen(true)}>
+          <span className="tab-flags"><span>{selectedPair.flags[0]}</span><span>{selectedPair.flags[1]}</span></span>
+          <b>{selectedPair.name}</b>
+          <strong>{selectedPair.profit1m}%</strong>
+          <ChevronDown size={14} />
         </div>
 
-        {/* Pending Trade Switch */}
         <div className="pending" onClick={togglePendingTrade}>
           <Clock3 size={15} />
           <span>PENDING TRADE</span>
-          <div className={`pending-switch ${pendingTrade ? "active" : ""}`}>
-            <div className="pending-switch-knob" />
-          </div>
+          <div className={`pending-switch ${pendingTrade ? "active" : ""}`}><div className="pending-switch-knob" /></div>
         </div>
 
-        {/* Time input with popup */}
         <TimeBox />
-
-        {/* Investment input with switch */}
         <StakeBox />
 
-        {/* Payout calculation */}
         <div className="payout">
           <span>Payout</span>
           <i />
           <strong>{payout}</strong>
         </div>
 
-        {/* Buy & Sell buttons */}
         <ActionButtons />
       </section>
 
-      {/* Trades History Card */}
       <TradesList />
     </aside>
   );
 }
 
-/* ---------------- Desktop SubNav (Screenshots 3, 4, 5) ---------------- */
+/* ---------------- Desktop SubNav ---------------- */
 function DesktopSubNav() {
   const { currentView, setCurrentView } = useT();
 
   return (
     <div className="pages-subnav">
       <div className="subnav-tabs">
-        <button
-          className={`subnav-tab ${currentView === "withdrawal" ? "active" : ""}`}
-          onClick={() => setCurrentView("withdrawal")}
-        >
-          Withdrawal
-        </button>
-        <button
-          className={`subnav-tab ${currentView === "payments" ? "active" : ""}`}
-          onClick={() => setCurrentView("payments")}
-        >
-          Payments
-        </button>
-        <button
-          className={`subnav-tab ${currentView === "trading" ? "active" : ""}`}
-          onClick={() => setCurrentView("trading")}
-        >
-          Trades
-        </button>
-        <button
-          className={`subnav-tab ${currentView === "account" ? "active" : ""}`}
-          onClick={() => setCurrentView("account")}
-        >
-          My account
-        </button>
+        <button className={`subnav-tab ${currentView === "withdrawal" ? "active" : ""}`} onClick={() => setCurrentView("withdrawal")}>Withdrawal</button>
+        <button className={`subnav-tab ${currentView === "payments" ? "active" : ""}`} onClick={() => setCurrentView("payments")}>Payments</button>
+        <button className={`subnav-tab ${currentView === "trading" ? "active" : ""}`} onClick={() => setCurrentView("trading")}>Trades</button>
+        <button className={`subnav-tab ${currentView === "account" ? "active" : ""}`} onClick={() => setCurrentView("account")}>My account</button>
         <button className="subnav-tab">Market</button>
-        <button className="subnav-tab">Tournaments</button>
-        <button className="subnav-tab">Analytics</button>
+        <button className="subnav-tab" onClick={() => setCurrentView("leaderboard")}>Tournaments</button>
+        <button className="subnav-tab" onClick={() => setCurrentView("analytics")}>Analytics</button>
       </div>
 
       {currentView === "payments" ? (
         <div className="subnav-pagination">
-          <button>
-            <ChevronDown size={12} className="rotate-90 inline" /> Prev
-          </button>
+          <button><ChevronDown size={12} className="rotate-90 inline" /> Prev</button>
           <span>1/2</span>
-          <button>
-            Next <ChevronDown size={12} className="-rotate-90 inline" />
-          </button>
+          <button>Next <ChevronDown size={12} className="-rotate-90 inline" /></button>
         </div>
       ) : (
         <div className="subnav-info">
-          <div>
-            My current currency: <b>$ USD</b> <em>CHANGE</em>
-          </div>
+          <div>My current currency: <b>$ USD</b> <em>CHANGE</em></div>
           <div>Available for withdrawal</div>
           <div>In the account</div>
         </div>
@@ -1672,13 +1357,12 @@ function DesktopSubNav() {
   );
 }
 
-/* ---------------- Desktop "My account" View (Screenshot 3) ---------------- */
+/* ---------------- Desktop "My account" View ---------------- */
 function DesktopAccountView() {
   return (
     <div className="desktop-page-container">
       <DesktopSubNav />
       <div className="account-page-grid">
-        {/* Left Column: Personal Data */}
         <div>
           <div className="account-section-title">Personal data:</div>
           <div className="avatar-card">
@@ -1686,89 +1370,39 @@ function DesktopAccountView() {
             <div className="avatar-info">
               <div className="flex items-center gap-2">
                 <b>trader.demo@test.com</b>
-                <Trash2
-                  size={15}
-                  className="text-muted-foreground hover:text-red-500 cursor-pointer"
-                />
+                <Trash2 size={15} className="text-muted-foreground hover:text-red-500 cursor-pointer" />
               </div>
               <span>ID: 10482910</span>
-              <span className="verified-tag">
-                <Check size={14} strokeWidth={3} /> Verified
-              </span>
+              <span className="verified-tag"><Check size={14} strokeWidth={3} /> Verified</span>
             </div>
           </div>
 
-          <div className="custom-field">
-            <span className="field-tag">Nickname</span>
-            <span>TEST TRADER</span>
-          </div>
-
-          <div className="custom-field">
-            <span className="field-tag">First Name</span>
-            <span>Demo</span>
-          </div>
-
-          <div className="custom-field">
-            <span className="field-tag">Last Name</span>
-            <span>User</span>
-          </div>
-
-          <div className="custom-field">
-            <span className="field-tag">Date of birth</span>
-            <span>01/01/1995</span>
-            <ChevronDown size={16} />
-          </div>
-
-          <div className="custom-field">
-            <span className="field-tag">Email</span>
-            <span>trader.demo@test.com</span>
-            <span className="text-green-500 text-xs font-bold">Verified</span>
-          </div>
+          <div className="custom-field"><span className="field-tag">Nickname</span><span>TEST TRADER</span></div>
+          <div className="custom-field"><span className="field-tag">First Name</span><span>Demo</span></div>
+          <div className="custom-field"><span className="field-tag">Last Name</span><span>User</span></div>
+          <div className="custom-field"><span className="field-tag">Date of birth</span><span>01/01/1995</span><ChevronDown size={16} /></div>
+          <div className="custom-field"><span className="field-tag">Email</span><span>trader.demo@test.com</span><span className="text-green-500 text-xs font-bold">Verified</span></div>
         </div>
 
-        {/* Right Column: Security */}
         <div>
           <div className="account-section-title">Security:</div>
-
           <div className="security-row">
-            <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center text-black font-bold text-xs mt-0.5">
-              ✓
-            </div>
+            <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center text-black font-bold text-xs mt-0.5">✓</div>
             <div>
-              <div className="text-white font-bold text-sm">
-                Two-step verification
-              </div>
-              <div className="text-muted-foreground text-xs flex items-center gap-1.5 mt-0.5">
-                Receiving codes via Email{" "}
-                <Pencil size={12} className="text-blue-500" />
-              </div>
+              <div className="text-white font-bold text-sm">Two-step verification</div>
+              <div className="text-muted-foreground text-xs flex items-center gap-1.5 mt-0.5">Receiving codes via Email <Pencil size={12} className="text-blue-500" /></div>
             </div>
           </div>
 
-          <div className="security-switch-row">
-            <span>To enter the platform</span>
-            <div className="pending-switch active">
-              <div className="pending-switch-knob" />
-            </div>
-          </div>
-
-          <div className="security-switch-row">
-            <span>To withdraw funds</span>
-            <div className="pending-switch active">
-              <div className="pending-switch-knob" />
-            </div>
-          </div>
+          <div className="security-switch-row"><span>To enter the platform</span><div className="pending-switch active"><div className="pending-switch-knob" /></div></div>
+          <div className="security-switch-row"><span>To withdraw funds</span><div className="pending-switch active"><div className="pending-switch-knob" /></div></div>
 
           <div className="mt-6 flex items-start gap-3">
             <Lock size={18} className="text-muted-foreground mt-0.5" />
             <div>
               <div className="text-white font-bold text-sm">Password</div>
-              <div className="text-muted-foreground text-xs mt-0.5">
-                Change your account password
-              </div>
-              <span className="text-blue-500 text-xs font-bold mt-2 inline-block cursor-pointer hover:underline">
-                Change
-              </span>
+              <div className="text-muted-foreground text-xs mt-0.5">Change your account password</div>
+              <span className="text-blue-500 text-xs font-bold mt-2 inline-block cursor-pointer hover:underline">Change</span>
             </div>
           </div>
         </div>
@@ -1777,7 +1411,7 @@ function DesktopAccountView() {
   );
 }
 
-/* ---------------- Desktop "Payments" View (Screenshot 4) ---------------- */
+/* ---------------- Desktop "Payments" View ---------------- */
 function DesktopPaymentsView() {
   return (
     <div className="desktop-page-container">
@@ -1801,26 +1435,14 @@ function DesktopPaymentsView() {
                 <td className="text-muted-foreground text-xs">{p.dateTime}</td>
                 <td>
                   {p.status === "Successed" ? (
-                    <span className="status-pill success">
-                      <Check size={14} strokeWidth={3} /> Successed
-                    </span>
+                    <span className="status-pill success"><Check size={14} strokeWidth={3} /> Successed</span>
                   ) : (
-                    <span className="status-pill failed">
-                      <X size={14} strokeWidth={3} /> Failed
-                    </span>
+                    <span className="status-pill failed"><X size={14} strokeWidth={3} /> Failed</span>
                   )}
                 </td>
                 <td className="text-muted-foreground">{p.type}</td>
                 <td>{p.system}</td>
-                <td
-                  className={
-                    p.status === "Successed"
-                      ? "text-green-500 font-bold"
-                      : "text-muted-foreground font-bold"
-                  }
-                >
-                  {p.amount}
-                </td>
+                <td className={p.status === "Successed" ? "text-green-500 font-bold" : "text-muted-foreground font-bold"}>{p.amount}</td>
               </tr>
             ))}
           </tbody>
@@ -1830,7 +1452,7 @@ function DesktopPaymentsView() {
   );
 }
 
-/* ---------------- Desktop "Withdrawal" View (Screenshot 5) ---------------- */
+/* ---------------- Desktop "Withdrawal" View ---------------- */
 function DesktopWithdrawalView() {
   return (
     <div className="desktop-page-container">
@@ -1838,61 +1460,27 @@ function DesktopWithdrawalView() {
       <div className="withdrawal-page-grid">
         <div className="withdrawal-balances">
           <div className="account-section-title">Account:</div>
-          <div className="withdrawal-balance-item">
-            <small>In the account:</small>
-            <b>31,626.40$</b>
-          </div>
-          <div className="withdrawal-balance-item mt-4">
-            <small>Available for withdrawal:</small>
-            <b>31,626.40$</b>
-          </div>
+          <div className="withdrawal-balance-item"><small>In the account:</small><b>31,681.60$</b></div>
+          <div className="withdrawal-balance-item mt-4"><small>Available for withdrawal:</small><b>31,681.60$</b></div>
         </div>
 
         <div>
           <div className="account-section-title">Withdrawal:</div>
-
           <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="custom-field mb-0">
-              <span className="field-tag">Amount</span>
-              <span className="font-bold">10</span>
-              <span className="text-muted-foreground text-xs">USD</span>
-            </div>
-            <div className="custom-field mb-0">
-              <span className="field-tag">Payment method</span>
-              <span className="flex items-center gap-1.5 font-bold">
-                <span className="text-yellow-500 font-bold">🔸</span> Binance
-                Pay
-              </span>
-              <ChevronDown size={16} />
-            </div>
+            <div className="custom-field mb-0"><span className="field-tag">Amount</span><span className="font-bold">10</span><span className="text-muted-foreground text-xs">USD</span></div>
+            <div className="custom-field mb-0"><span className="field-tag">Payment method</span><span className="flex items-center gap-1.5 font-bold"><span className="text-yellow-500">🔸</span> Binance Pay</span><ChevronDown size={16} /></div>
           </div>
-
-          <div className="custom-field">
-            <span className="field-tag">First name</span>
-            <span>Demo</span>
-          </div>
-
-          <div className="custom-field">
-            <span className="field-tag">Last name</span>
-            <span>User</span>
-          </div>
-
-          <div className="custom-field">
-            <span className="field-tag">Receive type</span>
-            <span className="text-muted-foreground">Select</span>
-            <ChevronDown size={16} />
-          </div>
-
-          <button className="confirm-btn">
-            Confirm <ArrowRight size={16} />
-          </button>
+          <div className="custom-field"><span className="field-tag">First name</span><span>Demo</span></div>
+          <div className="custom-field"><span className="field-tag">Last name</span><span>User</span></div>
+          <div className="custom-field"><span className="field-tag">Receive type</span><span className="text-muted-foreground">Select</span><ChevronDown size={16} /></div>
+          <button className="confirm-btn">Confirm <ArrowRight size={16} /></button>
         </div>
       </div>
     </div>
   );
 }
 
-/* ---------------- Desktop Screen Composition ---------------- */
+/* ---------------- Desktop Screen ---------------- */
 function DesktopScreen() {
   const { currentView } = useT();
 
@@ -1907,14 +1495,7 @@ function DesktopScreen() {
             <PairTabs />
             <div className="chart-container">
               <ChartGrid />
-              <div className="sentiment">
-                <b>34%</b>
-                <span>
-                  <i />
-                  <i />
-                </span>
-                <b>66%</b>
-              </div>
+              <div className="sentiment"><b>34%</b><span><i /><i /></span><b>66%</b></div>
             </div>
           </main>
           <TradePanel />
@@ -1924,22 +1505,21 @@ function DesktopScreen() {
       {currentView === "account" && <DesktopAccountView />}
       {currentView === "payments" && <DesktopPaymentsView />}
       {currentView === "withdrawal" && <DesktopWithdrawalView />}
+      {currentView === "leaderboard" && <LeaderboardView onBack={() => {}} onClose={() => {}} />}
+      {currentView === "analytics" && <AnalyticsView />}
       {currentView === "help" && <DesktopAccountView />}
     </div>
   );
 }
 
-/* ---------------- Mobile Header & Navigation ---------------- */
+/* ---------------- Mobile Header & Nav ---------------- */
 function MobileHeader() {
-  const { setCurrentView } = useT();
+  const { setDepositModalStep } = useT();
   return (
     <header className="mobile-header">
       <AccountBlock mobile />
       <NotificationBadge />
-      <ScreenButton
-        className="deposit"
-        onClick={() => setCurrentView("withdrawal")}
-      >
+      <ScreenButton className="deposit" onClick={() => setDepositModalStep("methods")}>
         Deposit
       </ScreenButton>
     </header>
@@ -1951,71 +1531,33 @@ function MobileNav() {
 
   return (
     <nav className="mobile-nav">
-      <span
-        onClick={() => setCurrentView("trading")}
-        className={currentView === "trading" ? "text-blue-500" : ""}
-      >
-        <ImageIcon size={20} />
-      </span>
-      <span
-        onClick={() => setCurrentView("help")}
-        className={currentView === "help" ? "text-blue-500" : ""}
-      >
-        <CircleHelp size={20} />
-      </span>
-      <span
-        onClick={() => setCurrentView("account")}
-        className={currentView === "account" ? "text-blue-500" : ""}
-      >
-        <UserRound size={20} />
-      </span>
-      <span>
-        <Trophy size={20} />
-        <b>4</b>
-      </span>
-      <span
-        onClick={() => setCurrentView("more")}
-        className={currentView === "more" ? "text-blue-500" : ""}
-      >
-        <MoreHorizontal size={22} />
-        <b>2</b>
-      </span>
+      <span onClick={() => setCurrentView("trading")} className={currentView === "trading" ? "text-blue-500" : ""}><ImageIcon size={20} /></span>
+      <span onClick={() => setCurrentView("help")} className={currentView === "help" ? "text-blue-500" : ""}><CircleHelp size={20} /></span>
+      <span onClick={() => setCurrentView("account")} className={currentView === "account" ? "text-blue-500" : ""}><UserRound size={20} /></span>
+      <span onClick={() => setCurrentView("leaderboard")} className={currentView === "leaderboard" ? "text-blue-500" : ""}><Trophy size={20} /><b>4</b></span>
+      <span onClick={() => setCurrentView("more")} className={currentView === "more" ? "text-blue-500" : ""}><MoreHorizontal size={22} /><b>2</b></span>
     </nav>
   );
 }
 
-/* ---------------- Compact Mobile Trade Panel (Zero Scroll) ---------------- */
+/* ---------------- Compact Mobile Trade Panel (Screenshot 1 & 13) ---------------- */
 function MobileTradePanel() {
-  const {
-    activePair,
-    effectiveStake,
-    pendingTrade,
-    togglePendingTrade,
-    activePairIndex,
-    setActivePairIndex,
-  } = useT();
-
-  const payout = `${fmtMoney(effectiveStake * (1 + activePair.rate))} $`;
-
-  const cyclePair = () => {
-    setActivePairIndex((i) => (i + 1) % PAIRS.length);
-  };
+  const { selectedPair, effectiveStake, pendingTrade, togglePendingTrade, setTradePairModalOpen } = useT();
+  const payout = `${fmtMoney(effectiveStake * (1 + selectedPair.profit1m / 100))} $`;
 
   return (
     <section className="mobile-trade-panel">
-      {/* Row 1: Pair selection & Pending toggle */}
+      {/* Row 1: Pair selection dropdown & Pending toggle (Screenshot 1) */}
       <div className="mobile-pair-row">
-        <div className="mobile-pair" onClick={cyclePair}>
-          <PairFlags flags={activePair.flags} compact />
-          <b>{activePair.name}</b>
-          <strong>{Math.round(activePair.rate * 100)}%</strong>
+        <div className="mobile-pair cursor-pointer" onClick={() => setTradePairModalOpen(true)}>
+          <span className="text-base">{selectedPair.flags[0]}{selectedPair.flags[1]}</span>
+          <b>{selectedPair.name.slice(0, 10)} ...</b>
+          <strong className="text-amber-500">{selectedPair.profit1m}%</strong>
           <ChevronDown size={14} />
         </div>
         <div className="pending" onClick={togglePendingTrade}>
           <span>PENDING TRADE</span>
-          <div className={`pending-switch ${pendingTrade ? "active" : ""}`}>
-            <div className="pending-switch-knob" />
-          </div>
+          <div className={`pending-switch ${pendingTrade ? "active" : ""}`}><div className="pending-switch-knob" /></div>
         </div>
       </div>
 
@@ -2032,13 +1574,13 @@ function MobileTradePanel() {
         <strong>{payout}</strong>
       </div>
 
-      {/* Row 4: Buy & Sell side by side */}
+      {/* Row 4: Buy & Sell */}
       <ActionButtons />
     </section>
   );
 }
 
-/* ---------------- Mobile "My account" View (Screenshot 9) ---------------- */
+/* ---------------- Mobile Account View ---------------- */
 function MobileAccountView() {
   return (
     <div className="mobile-view-wrapper">
@@ -2057,55 +1599,102 @@ function MobileAccountView() {
               <Trash2 size={14} className="text-muted-foreground" />
             </div>
             <span className="text-xs">ID: 10482910</span>
-            <span className="verified-tag text-xs">
-              <Check size={12} strokeWidth={3} /> Verified
-            </span>
+            <span className="verified-tag text-xs"><Check size={12} strokeWidth={3} /> Verified</span>
           </div>
         </div>
 
-        <div className="custom-field">
-          <span className="field-tag">Nickname</span>
-          <span>TEST TRADER</span>
+        <div className="custom-field"><span className="field-tag">Nickname</span><span>TEST TRADER</span></div>
+        <div className="custom-field"><span className="field-tag">First Name</span><span>Demo</span></div>
+        <div className="custom-field"><span className="field-tag">Last Name</span><span>User</span></div>
+        <div className="custom-field"><span className="field-tag">Date of birth</span><span>01/01/1995</span><ChevronDown size={14} /></div>
+        <div className="custom-field"><span className="field-tag">Email</span><span className="truncate pr-2 text-xs">trader.demo@test.com</span><span className="text-green-500 text-xs font-bold">Verified</span></div>
+        <div className="custom-field"><span className="field-tag">Country</span><span>International</span><ChevronDown size={14} /></div>
+        <div className="custom-field"><span className="field-tag">Address</span><span>Sample Street 101, Test City</span></div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Mobile More View (Screenshots 8 & 10) ---------------- */
+function MobileMoreView() {
+  const { setCurrentView, setDepositModalStep } = useT();
+
+  return (
+    <div className="mobile-view-wrapper">
+      <div className="mobile-more-view">
+        <div className="mobile-more-header">
+          <span>More</span>
+          <X size={20} className="text-muted-foreground cursor-pointer" onClick={() => setCurrentView("trading")} />
         </div>
 
-        <div className="custom-field">
-          <span className="field-tag">First Name</span>
-          <span>Demo</span>
+        <div className="mobile-more-card" onClick={() => setCurrentView("trading")}>
+          <ShoppingBag size={18} />
+          <span>Market</span>
+          <span className="card-badge">2</span>
+          <ChevronRight size={16} />
         </div>
 
-        <div className="custom-field">
-          <span className="field-tag">Last Name</span>
-          <span>User</span>
+        <div className="mobile-more-card" onClick={() => setCurrentView("analytics")}>
+          <PieChart size={18} />
+          <span>Analytics</span>
+          <ChevronRight size={16} />
         </div>
 
-        <div className="custom-field">
-          <span className="field-tag">Date of birth</span>
-          <span>01/01/1995</span>
-          <ChevronDown size={14} />
+        <div className="mobile-more-card" onClick={() => setCurrentView("leaderboard")}>
+          <Briefcase size={18} />
+          <span>TOP</span>
+          <ChevronRight size={16} />
         </div>
 
-        <div className="custom-field">
-          <span className="field-tag">Email</span>
-          <span className="truncate pr-2 text-xs">trader.demo@test.com</span>
-          <span className="text-green-500 text-xs font-bold">Verified</span>
+        <div className="mobile-more-card">
+          <Radio size={18} />
+          <span>Signals</span>
+          <ChevronRight size={16} />
         </div>
 
-        <div className="custom-field">
-          <span className="field-tag">Country</span>
-          <span>International</span>
-          <ChevronDown size={14} />
+        <div className="mobile-more-links">
+          <div className="mobile-more-link" onClick={() => setDepositModalStep("methods")}>Deposit</div>
+          <div className="mobile-more-link" onClick={() => setCurrentView("withdrawal")}>Withdrawal</div>
+          <div className="mobile-more-link" onClick={() => setCurrentView("payments")}>Payments</div>
+          <div className="mobile-more-link" onClick={() => setCurrentView("trading")}>Trades</div>
         </div>
 
-        <div className="custom-field">
-          <span className="field-tag">Address</span>
-          <span>Sample Street 101, Test City</span>
+        <div className="mobile-more-footer">
+          <div className="footer-link-blue"><Settings size={18} /><span>Settings</span></div>
+          <div className="footer-link-red"><LogOut size={18} /><span>Logout</span></div>
+        </div>
+
+        <button className="join-us-btn"><MessageSquare size={16} /><span>Join Us</span></button>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Mobile Help View ---------------- */
+function MobileHelpView() {
+  const { setCurrentView } = useT();
+
+  return (
+    <div className="mobile-view-wrapper">
+      <div className="mobile-help-view">
+        <div className="mobile-more-header">
+          <span>Help</span>
+          <X size={20} className="text-muted-foreground cursor-pointer" onClick={() => setCurrentView("trading")} />
+        </div>
+        <div className="help-item"><div className="help-item-icon">⊞</div><b>FAQ</b><span>Open the database</span></div>
+        <div className="help-item"><div className="help-item-icon">🎓</div><b>Tutorials</b><span>Use the hints</span></div>
+        <div className="help-item"><div className="help-item-icon">🎧</div><b>Support</b><span>Submit a ticket</span></div>
+        <div className="help-bottom-bubble">
+          <div className="help-q-mark">?</div>
+          <span>Didn't find an answer to your question?</span>
+          <a>Contact support</a>
         </div>
       </div>
     </div>
   );
 }
 
-/* ---------------- Mobile "Payments" View (Screenshot 12) ---------------- */
+/* ---------------- Mobile Payments View ---------------- */
 function MobilePaymentsView() {
   return (
     <div className="mobile-view-wrapper">
@@ -2115,25 +1704,13 @@ function MobilePaymentsView() {
       </div>
 
       <div className="mobile-payments-list">
-        <div className="mobile-payments-head">
-          <span>Transaction ID</span>
-          <span>Amount</span>
-        </div>
-
+        <div className="mobile-payments-head"><span>Transaction ID</span><span>Amount</span></div>
         {PAYMENTS_DATA.map((p) => (
           <div className="mobile-payment-item" key={p.id}>
             <div className="mobile-payment-left">
               <b>{p.id}</b>
               <small>{p.dateTime}</small>
-              {p.status === "Successed" ? (
-                <span className="status-pill success">
-                  <Check size={13} strokeWidth={3} /> Successed
-                </span>
-              ) : (
-                <span className="status-pill failed">
-                  <X size={13} strokeWidth={3} /> Failed
-                </span>
-              )}
+              {p.status === "Successed" ? <span className="status-pill success"><Check size={13} strokeWidth={3} /> Successed</span> : <span className="status-pill failed"><X size={13} strokeWidth={3} /> Failed</span>}
             </div>
             <div className="mobile-payment-right">
               <b>{p.amount}</b>
@@ -2147,147 +1724,9 @@ function MobilePaymentsView() {
   );
 }
 
-/* ---------------- Mobile "More" View (Screenshots 8 & 11) ---------------- */
-function MobileMoreView() {
-  const { setCurrentView } = useT();
-
-  return (
-    <div className="mobile-view-wrapper">
-      <div className="mobile-more-view">
-        <div className="mobile-more-header">
-          <span>More</span>
-          <X
-            size={20}
-            className="text-muted-foreground cursor-pointer"
-            onClick={() => setCurrentView("trading")}
-          />
-        </div>
-
-        <div className="mobile-more-card">
-          <ShoppingBag size={18} />
-          <span>Market</span>
-          <span className="card-badge">2</span>
-          <ChevronRight size={16} />
-        </div>
-
-        <div className="mobile-more-card">
-          <PieChart size={18} />
-          <span>Analytics</span>
-          <ChevronRight size={16} />
-        </div>
-
-        <div className="mobile-more-card">
-          <Briefcase size={18} />
-          <span>TOP</span>
-          <ChevronRight size={16} />
-        </div>
-
-        <div className="mobile-more-card">
-          <Radio size={18} />
-          <span>Signals</span>
-          <ChevronRight size={16} />
-        </div>
-
-        <div className="mobile-more-links">
-          <div
-            className="mobile-more-link"
-            onClick={() => setCurrentView("withdrawal")}
-          >
-            Deposit
-          </div>
-          <div
-            className="mobile-more-link"
-            onClick={() => setCurrentView("withdrawal")}
-          >
-            Withdrawal
-          </div>
-          <div
-            className="mobile-more-link"
-            onClick={() => setCurrentView("payments")}
-          >
-            Payments
-          </div>
-          <div
-            className="mobile-more-link"
-            onClick={() => setCurrentView("trading")}
-          >
-            Trades
-          </div>
-        </div>
-
-        <div className="mobile-more-footer">
-          <div className="footer-link-blue">
-            <Settings size={18} />
-            <span>Settings</span>
-          </div>
-          <div className="footer-link-red">
-            <LogOut size={18} />
-            <span>Logout</span>
-          </div>
-        </div>
-
-        <button className="join-us-btn">
-          <MessageSquare size={16} />
-          <span>Join Us</span>
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/* ---------------- Mobile "Help" View (Screenshot 10) ---------------- */
-function MobileHelpView() {
-  const { setCurrentView } = useT();
-
-  return (
-    <div className="mobile-view-wrapper">
-      <div className="mobile-help-view">
-        <div className="mobile-more-header">
-          <span>Help</span>
-          <X
-            size={20}
-            className="text-muted-foreground cursor-pointer"
-            onClick={() => setCurrentView("trading")}
-          />
-        </div>
-
-        <div className="help-item">
-          <div className="help-item-icon">
-            <LayoutGrid size={28} />
-          </div>
-          <b>FAQ</b>
-          <span>Open the database</span>
-        </div>
-
-        <div className="help-item">
-          <div className="help-item-icon">
-            <GraduationCap size={30} />
-          </div>
-          <b>Tutorials</b>
-          <span>Use the hints</span>
-        </div>
-
-        <div className="help-item">
-          <div className="help-item-icon">
-            <Headphones size={28} />
-          </div>
-          <b>Support</b>
-          <span>Submit a ticket</span>
-        </div>
-
-        <div className="help-bottom-bubble">
-          <div className="help-q-mark">?</div>
-          <span>Didn't find an answer to your question?</span>
-          <a>Contact support</a>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ---------------- Mobile Screen (100% Fixed, Zero Scroll) ---------------- */
+/* ---------------- Mobile Screen ---------------- */
 function MobileScreen() {
-  const { currentView } = useT();
+  const { currentView, setCurrentView } = useT();
 
   return (
     <div className="mobile-screen">
@@ -2302,14 +1741,14 @@ function MobileScreen() {
 
       {currentView === "account" && <MobileAccountView />}
       {currentView === "payments" && <MobilePaymentsView />}
-      {currentView === "withdrawal" && <MobilePaymentsView />}
+      {currentView === "withdrawal" && <MobileWithdrawalView />}
       {currentView === "more" && <MobileMoreView />}
+      {currentView === "leaderboard" && <LeaderboardView onBack={() => setCurrentView("more")} onClose={() => setCurrentView("trading")} />}
+      {currentView === "analytics" && <AnalyticsView />}
       {currentView === "help" && <MobileHelpView />}
 
       <MobileNav />
-      <div className="phone-home">
-        <i />
-      </div>
+      <div className="phone-home"><i /></div>
     </div>
   );
 }
@@ -2317,11 +1756,83 @@ function MobileScreen() {
 /* ---------------- Root Trading Screen ---------------- */
 function TradingScreen() {
   const state = useTradingState();
+
   return (
     <Ctx.Provider value={state}>
       <div className="trading-app">
         <DesktopScreen />
         <MobileScreen />
+
+        {/* Trade Pair Selector Modal (Screenshot 2) */}
+        {state.tradePairModalOpen && (
+          <TradePairModal
+            onSelect={(pair) => state.setSelectedPair(pair)}
+            onClose={() => state.setTradePairModalOpen(false)}
+          />
+        )}
+
+        {/* Deposit Flow Modals (Screenshots 5, 6, 7) */}
+        {state.depositModalStep === "methods" && (
+          <DepositModal
+            onSelectMethod={(m) => {
+              state.setDepositMethod(m);
+              state.setDepositModalStep("amount");
+            }}
+            onClose={() => state.setDepositModalStep("none")}
+          />
+        )}
+
+        {state.depositModalStep === "amount" && (
+          <DepositAmountModal
+            method={state.depositMethod}
+            onProceed={(amt) => {
+              state.setDepositAmount(amt);
+              state.setDepositModalStep("payment");
+            }}
+            onBack={() => state.setDepositModalStep("methods")}
+            onClose={() => state.setDepositModalStep("none")}
+          />
+        )}
+
+        {state.depositModalStep === "payment" && (
+          <DepositPaymentModal
+            amount={state.depositAmount}
+            method={state.depositMethod}
+            onBack={() => state.setDepositModalStep("amount")}
+            onClose={() => state.setDepositModalStep("none")}
+          />
+        )}
+
+        {/* Indicators Modal (Screenshots 15 & 16) */}
+        {state.indicatorsModalOpen && (
+          <IndicatorsModal
+            onSelectKeltner={() => {
+              state.setIndicatorsModalOpen(false);
+              state.setKeltnerConfigOpen(true);
+            }}
+            onClose={() => state.setIndicatorsModalOpen(false)}
+          />
+        )}
+
+        {/* Keltner Channel Config Modal (Screenshot 17) */}
+        {state.keltnerConfigOpen && (
+          <KeltnerConfigModal
+            onApply={() => {
+              state.setKeltnerActive(true);
+              state.setKeltnerConfigOpen(false);
+            }}
+            onBack={() => {
+              state.setKeltnerConfigOpen(false);
+              state.setIndicatorsModalOpen(true);
+            }}
+            onClose={() => state.setKeltnerConfigOpen(false)}
+          />
+        )}
+
+        {/* Drawings Modal (Screenshot 20) */}
+        {state.drawingsModalOpen && (
+          <DrawingsModal onClose={() => state.setDrawingsModalOpen(false)} />
+        )}
       </div>
     </Ctx.Provider>
   );
