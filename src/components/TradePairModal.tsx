@@ -14,6 +14,12 @@ export interface PairItem {
 }
 
 export const ALL_PAIRS: PairItem[] = [
+  { id: "usd-cop", name: "USD/COP (OTC)", flags: ["🇺🇸", "🇨🇴"], profit1m: 82, profit5m: 82, change: "+0.13%", isPositive: true, basePrice: 4210.5, decimals: 2 },
+  { id: "usd-dzd", name: "USD/DZD (OTC)", flags: ["🇺🇸", "🇩🇿"], profit1m: 88, profit5m: 88, change: "-0.22%", isPositive: false, basePrice: 133.45, decimals: 2 },
+  { id: "gbp-cad", name: "GBP/CAD (OTC)", flags: ["🇬🇧", "🇨🇦"], profit1m: 88, profit5m: 88, change: "+0.45%", isPositive: true, basePrice: 1.7642, decimals: 4 },
+  { id: "nzd-jpy", name: "NZD/JPY (OTC)", flags: ["🇳🇿", "🇯🇵"], profit1m: 90, profit5m: 90, change: "+0.80%", isPositive: true, basePrice: 91.24, decimals: 2 },
+  { id: "usd-idr", name: "USD/IDR (OTC)", flags: ["🇺🇸", "🇮🇩"], profit1m: 77, profit5m: 77, change: "-0.15%", isPositive: false, basePrice: 15650, decimals: 1 },
+  { id: "aud-nzd", name: "AUD/NZD (OTC)", flags: ["🇦🇺", "🇳🇿"], profit1m: 74, profit5m: 74, change: "+0.32%", isPositive: true, basePrice: 1.16343, decimals: 5 },
   { id: "nzd-usd", name: "NZD/USD (OTC)", flags: ["🇳🇿", "🇺🇸"], profit1m: 94, profit5m: 94, change: "-1.9%", isPositive: false, basePrice: 0.5892, decimals: 4 },
   { id: "chf-jpy", name: "CHF/JPY (OTC)", flags: ["🇨🇭", "🇯🇵"], profit1m: 93, profit5m: 92, change: "-0.41%", isPositive: false, basePrice: 172.45, decimals: 2 },
   { id: "usd-jpy", name: "USD/JPY (OTC)", flags: ["🇺🇸", "🇯🇵"], profit1m: 93, profit5m: 94, change: "+0.46%", isPositive: true, basePrice: 153.28, decimals: 2 },
@@ -23,8 +29,6 @@ export const ALL_PAIRS: PairItem[] = [
   { id: "usd-egp", name: "USD/EGP (OTC)", flags: ["🇺🇸", "🇪🇬"], profit1m: 91, profit5m: 92, change: "+0.06%", isPositive: true, basePrice: 48.9, decimals: 2 },
   { id: "gbp-jpy", name: "GBP/JPY (OTC)", flags: ["🇬🇧", "🇯🇵"], profit1m: 90, profit5m: 93, change: "-0.57%", isPositive: false, basePrice: 198.6, decimals: 2 },
   { id: "nzd-cad", name: "NZD/CAD (OTC)", flags: ["🇳🇿", "🇨🇦"], profit1m: 90, profit5m: 78, change: "+2.74%", isPositive: true, basePrice: 0.824, decimals: 4 },
-  { id: "usd-cop", name: "USD/COP (OTC)", flags: ["🇺🇸", "🇨🇴"], profit1m: 90, profit5m: 92, change: "+0.13%", isPositive: true, basePrice: 4210.5, decimals: 2 },
-  { id: "aud-nzd", name: "AUD/NZD (OTC)", flags: ["🇦🇺", "🇳🇿"], profit1m: 92, profit5m: 92, change: "+0.32%", isPositive: true, basePrice: 1.16556, decimals: 5 },
 ];
 
 export function TradePairModal({

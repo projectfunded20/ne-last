@@ -47,6 +47,7 @@ import {
   UserRound,
   Volume2,
   VolumeX,
+  RotateCcw,
   X,
 } from "lucide-react";
 import {
@@ -61,10 +62,13 @@ import {
   type ReactNode,
 } from "react";
 import {
+  BollingerConfigModal,
   ChartTypePopover,
   DrawingsModal,
+  EnvelopesConfigModal,
   IndicatorsModal,
   KeltnerConfigModal,
+  MAConfigModal,
   TimeframePopover,
 } from "../components/ChartToolsModals";
 import {
@@ -115,6 +119,22 @@ export type PaymentItem = {
 };
 
 const INITIAL_PAYMENTS_DATA: PaymentItem[] = [
+  {
+    id: "132140098",
+    dateTime: "04/10/2026, 21:42:03",
+    status: "Processing",
+    type: "Deposit",
+    system: "USDT (TRC-20)",
+    amount: "+$100.00",
+  },
+  {
+    id: "132140043",
+    dateTime: "04/10/2026, 21:41:30",
+    status: "Processing",
+    type: "Deposit",
+    system: "Binance Pay",
+    amount: "+$100.00",
+  },
   {
     id: "132049457",
     dateTime: "03/10/2026, 19:50:55",
@@ -243,12 +263,12 @@ function seeded(seed: number) {
   };
 }
 
-function generateCandles(basePrice: number, decimals: number): Candle[] {
+function generateCandles(basePrice: number, decimals: number, count = 250): Candle[] {
   const r = seeded(42);
   const out: Candle[] = [];
   const scale = Math.pow(10, -Math.min(decimals, 4)) * 2;
   let p = basePrice;
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < count; i++) {
     const o = p;
     const c = o + (r() - 0.5) * scale;
     const h = Math.max(o, c) + r() * (scale * 0.4);
@@ -257,6 +277,82 @@ function generateCandles(basePrice: number, decimals: number): Candle[] {
     p = c;
   }
   return out;
+}
+
+export interface ActiveIndicator {
+  id: string;
+  type: "keltner" | "envelopes" | "bollinger" | "ma" | "donchian" | "alligator";
+  name: string;
+  period: number;
+  param2?: number;
+  param3?: number;
+  colors: string[];
+  visible: boolean;
+}
+
+function calcSMA(data: number[], period: number): (number | null)[] {
+  const result: (number | null)[] = [];
+  for (let i = 0; i < data.length; i++) {
+    if (i < period - 1) {
+      result.push(null);
+    } else {
+      let sum = 0;
+      for (let j = 0; j < period; j++) sum += data[i - j]!;
+      result.push(sum / period);
+    }
+  }
+  return result;
+}
+
+function calcEMA(data: number[], period: number): (number | null)[] {
+  const result: (number | null)[] = [];
+  const k = 2 / (period + 1);
+  let prevEma: number | null = null;
+  for (let i = 0; i < data.length; i++) {
+    if (i < period - 1) {
+      result.push(null);
+    } else if (i === period - 1) {
+      let sum = 0;
+      for (let j = 0; j < period; j++) sum += data[j]!;
+      prevEma = sum / period;
+      result.push(prevEma);
+    } else {
+      prevEma = data[i]! * k + prevEma! * (1 - k);
+      result.push(prevEma);
+    }
+  }
+  return result;
+}
+
+function calcATR(candleList: Candle[], period: number): (number | null)[] {
+  const trs: number[] = [];
+  for (let i = 0; i < candleList.length; i++) {
+    const c = candleList[i]!;
+    if (i === 0) {
+      trs.push(c.h - c.l);
+    } else {
+      const prev = candleList[i - 1]!;
+      trs.push(Math.max(c.h - c.l, Math.abs(c.h - prev.c), Math.abs(c.l - prev.c)));
+    }
+  }
+  return calcSMA(trs, period);
+}
+
+function calcStdDev(data: number[], period: number, sma: (number | null)[]): (number | null)[] {
+  const result: (number | null)[] = [];
+  for (let i = 0; i < data.length; i++) {
+    if (i < period - 1 || sma[i] === null) {
+      result.push(null);
+    } else {
+      let sumSq = 0;
+      const mean = sma[i]!;
+      for (let j = 0; j < period; j++) {
+        sumSq += Math.pow(data[i - j]! - mean, 2);
+      }
+      result.push(Math.sqrt(sumSq / period));
+    }
+  }
+  return result;
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -271,14 +367,25 @@ const fmtMoney = (n: number) =>
 /* ---------------- Hook: State Management ---------------- */
 function useTradingState() {
   const [currentView, setCurrentView] = useState<ViewScreen>("trading");
-  const [selectedPair, setSelectedPair] = useState<PairItem>(ALL_PAIRS[10]!); // Default AUD/NZD (OTC)
+  const [selectedPair, setSelectedPair] = useState<PairItem>(ALL_PAIRS[5] || ALL_PAIRS[0]!); // Default AUD/NZD (OTC)
+
+  const [openTabs, setOpenTabs] = useState<PairItem[]>(() => [
+    ALL_PAIRS[0]!,
+    ALL_PAIRS[1]!,
+    ALL_PAIRS[2]!,
+    ALL_PAIRS[3]!,
+    ALL_PAIRS[4]!,
+    ALL_PAIRS[5] || ALL_PAIRS[0]!,
+  ]);
 
   const [candles, setCandles] = useState<Candle[]>(() =>
-    generateCandles(selectedPair.basePrice, selectedPair.decimals)
+    generateCandles(selectedPair.basePrice, selectedPair.decimals, 600)
   );
+  const [panOffset, setPanOffset] = useState(0);
+
   const [now, setNow] = useState<number | null>(null);
   const [account, setAccount] = useState<"live" | "demo">("live");
-  const [balances, setBalances] = useState({ live: 31681.6, demo: 5000.0 });
+  const [balances, setBalances] = useState({ live: 31671.1, demo: 5000.0 });
 
   // Stake configuration & switch ($ vs %)
   const [stakeMode, setStakeMode] = useState<"dollar" | "percent">("dollar");
@@ -310,7 +417,21 @@ function useTradingState() {
   const [selectedChartType, setSelectedChartType] = useState("Candles");
   const [indicatorsModalOpen, setIndicatorsModalOpen] = useState(false);
   const [keltnerConfigOpen, setKeltnerConfigOpen] = useState(false);
-  const [keltnerActive, setKeltnerActive] = useState(false);
+  const [envelopesConfigOpen, setEnvelopesConfigOpen] = useState(false);
+  const [bollingerConfigOpen, setBollingerConfigOpen] = useState(false);
+  const [maConfigOpen, setMaConfigOpen] = useState(false);
+  const [activeIndicators, setActiveIndicators] = useState<ActiveIndicator[]>([
+    {
+      id: "keltner-init",
+      type: "keltner",
+      name: "KELTNER CHANNEL",
+      period: 20,
+      param2: 10,
+      param3: 1,
+      colors: ["#22c55e", "#ef4444", "#ef4444"],
+      visible: true,
+    },
+  ]);
   const [drawingsModalOpen, setDrawingsModalOpen] = useState(false);
 
   // Overlays & Drawers
@@ -640,11 +761,55 @@ function useTradingState() {
     ? candles[candles.length - 1]!.c
     : selectedPair.basePrice;
 
+  const addOpenTab = (pair: PairItem) => {
+    if (!openTabs.some((t) => t.id === pair.id)) {
+      setOpenTabs((prev) => [...prev, pair]);
+    }
+    setSelectedPair(pair);
+  };
+
+  const closeOpenTab = (pairId: string) => {
+    setOpenTabs((prev) => {
+      const filtered = prev.filter((t) => t.id !== pairId);
+      if (filtered.length === 0) return [ALL_PAIRS[0]!];
+      return filtered;
+    });
+    if (selectedPair.id === pairId) {
+      const remaining = openTabs.filter((t) => t.id !== pairId);
+      if (remaining.length > 0) {
+        setSelectedPair(remaining[remaining.length - 1]!);
+      }
+    }
+  };
+
+  const addIndicator = (ind: ActiveIndicator) => {
+    setActiveIndicators((prev) => [...prev.filter((i) => i.id !== ind.id), ind]);
+  };
+
+  const removeIndicator = (id: string) => {
+    setActiveIndicators((prev) => prev.filter((i) => i.id !== id));
+  };
+
+  const clearAllIndicators = () => {
+    setActiveIndicators([]);
+  };
+
   return {
     currentView,
     setCurrentView,
     selectedPair,
     setSelectedPair,
+    openTabs,
+    setOpenTabs,
+    addOpenTab,
+    closeOpenTab,
+    panOffset,
+    setPanOffset,
+    activeIndicators,
+    setActiveIndicators,
+    addIndicator,
+    removeIndicator,
+    clearAllIndicators,
     tradePairModalOpen,
     setTradePairModalOpen,
     depositModalStep,
@@ -670,8 +835,12 @@ function useTradingState() {
     setIndicatorsModalOpen,
     keltnerConfigOpen,
     setKeltnerConfigOpen,
-    keltnerActive,
-    setKeltnerActive,
+    envelopesConfigOpen,
+    setEnvelopesConfigOpen,
+    bollingerConfigOpen,
+    setBollingerConfigOpen,
+    maConfigOpen,
+    setMaConfigOpen,
     drawingsModalOpen,
     setDrawingsModalOpen,
     candles,
@@ -1073,13 +1242,13 @@ function ActionButtons() {
   return (
     <div className="trade-actions">
       <button className="buy" onClick={() => placeTrade("up")}>
-        <span>Buy</span>
+        <b>Buy</b>
         <span>
           <ArrowUp size={16} strokeWidth={3} />
         </span>
       </button>
       <button className="sell" onClick={() => placeTrade("down")}>
-        <span>Sell</span>
+        <b>Sell</b>
         <span>
           <ArrowDown size={16} strokeWidth={3} />
         </span>
@@ -1090,22 +1259,44 @@ function ActionButtons() {
 
 /* ---------------- Desktop Header & Navigation ---------------- */
 function DesktopHeader() {
-  const { setDepositModalStep } = useT();
+  const { setDepositModalStep, setCurrentView, setDesktopMoreOpen } = useT();
 
   return (
     <header className="desktop-header">
-      <div className="brand">
-        <span className="brand-dot" />
-        <b>TRADEX</b>
+      <div className="brand flex items-center gap-2">
+        <button
+          className="menu-btn hover:text-white text-muted-foreground mr-1"
+          onClick={() => setDesktopMoreOpen((o) => !o)}
+          aria-label="Menu"
+        >
+          <Menu size={22} />
+        </button>
+        <svg viewBox="0 0 24 24" width="22" height="22">
+          <path d="M12 2 L21 7 L21 17 L12 22 L3 17 L3 7 Z" fill="none" stroke="#fff" strokeWidth="2" />
+          <line x1="9" y1="8" x2="9" y2="16" stroke="#fff" strokeWidth="2" />
+          <line x1="12" y1="6" x2="12" y2="18" stroke="#fff" strokeWidth="2" />
+          <line x1="15" y1="8" x2="15" y2="16" stroke="#fff" strokeWidth="2" />
+        </svg>
+        <b>QUOTEX</b>
+        <i />
+        <strong>WEB TRADING PLATFORM</strong>
       </div>
-      <AccountBlock />
-      <NotificationBadge />
-      <ScreenButton
-        className="deposit"
-        onClick={() => setDepositModalStep("methods")}
-      >
-        Deposit
-      </ScreenButton>
+      <div className="header-actions">
+        <NotificationBadge />
+        <AccountBlock />
+        <ScreenButton
+          className="deposit"
+          onClick={() => setDepositModalStep("methods")}
+        >
+          + Deposit
+        </ScreenButton>
+        <button
+          className="withdraw"
+          onClick={() => setCurrentView("withdrawal")}
+        >
+          Withdrawal
+        </button>
+      </div>
     </header>
   );
 }
@@ -1292,37 +1483,60 @@ function DesktopMoreMenu({ onClose }: { onClose: () => void }) {
 
 /* ---------------- Pair Tabs (Interactive Pair Switcher) ---------------- */
 function PairTabs() {
-  const { selectedPair, setTradePairModalOpen } = useT();
+  const {
+    openTabs,
+    selectedPair,
+    setSelectedPair,
+    closeOpenTab,
+    setTradePairModalOpen,
+  } = useT();
 
   return (
     <div className="pair-tabs">
       <ScreenButton
         className="add-pair"
         onClick={() => setTradePairModalOpen(true)}
+        aria-label="Add pair"
       >
         <Plus size={18} />
       </ScreenButton>
-      <div
-        className="pair-tab selected"
-        onClick={() => setTradePairModalOpen(true)}
-        role="button"
-        tabIndex={0}
-      >
-        <span className="tab-flags">
-          <span>{selectedPair.flags[0]}</span>
-          <span>{selectedPair.flags[1]}</span>
-        </span>
-        <div>
-          <b>{selectedPair.name.slice(0, 8)}...</b>
-          <strong>{selectedPair.profit1m}%</strong>
-        </div>
-        <ChevronDown size={13} />
-      </div>
+
+      {openTabs.map((pair) => {
+        const isSelected = pair.id === selectedPair.id;
+        return (
+          <div
+            key={pair.id}
+            className={`pair-tab ${isSelected ? "selected" : ""}`}
+            onClick={() => setSelectedPair(pair)}
+            role="button"
+            tabIndex={0}
+          >
+            <span className="tab-flags">
+              <span>{pair.flags[0]}</span>
+              <span>{pair.flags[1]}</span>
+            </span>
+            <div>
+              <b>{pair.name.replace(" (OTC)", "").slice(0, 9)}...</b>
+              <strong>{pair.profit1m}%</strong>
+            </div>
+            {isSelected ? (
+              <X
+                size={13}
+                className="text-muted-foreground hover:text-white ml-1 cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeOpenTab(pair.id);
+                }}
+              />
+            ) : null}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-/* ---------------- Candlestick Chart (Pinch-to-zoom & Gestures) ---------------- */
+/* ---------------- Candlestick Chart (Pinch-to-zoom, Pan, & Indicators) ---------------- */
 function ChartGrid({ mobile = false }: { mobile?: boolean }) {
   const {
     candles,
@@ -1336,6 +1550,10 @@ function ChartGrid({ mobile = false }: { mobile?: boolean }) {
     setVisibleCount,
     zoomIn,
     zoomOut,
+    panOffset,
+    setPanOffset,
+    activeIndicators,
+    setActiveIndicators,
     mobileTradesOpen,
     setMobileTradesOpen,
     chartToolsExpanded,
@@ -1349,8 +1567,10 @@ function ChartGrid({ mobile = false }: { mobile?: boolean }) {
     selectedChartType,
     setSelectedChartType,
     setIndicatorsModalOpen,
-    keltnerActive,
-    setKeltnerActive,
+    setKeltnerConfigOpen,
+    setEnvelopesConfigOpen,
+    setBollingerConfigOpen,
+    setMaConfigOpen,
     setDrawingsModalOpen,
     tradeResultPopup,
     setTradeResultPopup,
@@ -1360,15 +1580,29 @@ function ChartGrid({ mobile = false }: { mobile?: boolean }) {
     candleDownColor,
   } = useT();
 
-  // Gesture Pinch Zoom Handling
   const chartRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+  const dragStartX = useRef(0);
+  const dragStartPan = useRef(0);
   const touchDist = useRef<number | null>(null);
 
+  const count = Math.max(6, Math.min(60, visibleCount));
+  const step = 100 / count;
+  const totalCandles = candles.length;
+  const latestIdx = totalCandles - 1;
+  const anchorSlot = count - 1.2 - panOffset;
+
+  // Touch gesture handlers (Single finger drag to pan, Two finger pinch to zoom)
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 2) {
+      isDragging.current = false;
       const dx = e.touches[0]!.clientX - e.touches[1]!.clientX;
       const dy = e.touches[0]!.clientY - e.touches[1]!.clientY;
       touchDist.current = Math.hypot(dx, dy);
+    } else if (e.touches.length === 1) {
+      isDragging.current = true;
+      dragStartX.current = e.touches[0]!.clientX;
+      dragStartPan.current = panOffset;
     }
   };
 
@@ -1382,15 +1616,46 @@ function ChartGrid({ mobile = false }: { mobile?: boolean }) {
         if (diff > 0) {
           setVisibleCount((c) => Math.max(6, c - 1));
         } else {
-          setVisibleCount((c) => Math.min(55, c + 1));
+          setVisibleCount((c) => Math.min(60, c + 1));
         }
         touchDist.current = dist;
       }
+    } else if (e.touches.length === 1 && isDragging.current) {
+      const currentX = e.touches[0]!.clientX;
+      const dx = currentX - dragStartX.current;
+      const chartWidth = chartRef.current?.clientWidth || 600;
+      const slotPx = chartWidth / count;
+      const deltaSlots = dx / slotPx;
+      const newPan = Math.max(0, Math.min(candles.length - count, dragStartPan.current + deltaSlots));
+      setPanOffset(newPan);
     }
   };
 
   const handleTouchEnd = () => {
+    isDragging.current = false;
     touchDist.current = null;
+  };
+
+  // Mouse drag handlers for desktop pan
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    isDragging.current = true;
+    dragStartX.current = e.clientX;
+    dragStartPan.current = panOffset;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging.current) return;
+    const dx = e.clientX - dragStartX.current;
+    const chartWidth = chartRef.current?.clientWidth || 600;
+    const slotPx = chartWidth / count;
+    const deltaSlots = dx / slotPx;
+    const newPan = Math.max(0, Math.min(candles.length - count, dragStartPan.current + deltaSlots));
+    setPanOffset(newPan);
+  };
+
+  const handleMouseUp = () => {
+    isDragging.current = false;
   };
 
   const handleWheel = (e: React.WheelEvent) => {
@@ -1401,14 +1666,16 @@ function ChartGrid({ mobile = false }: { mobile?: boolean }) {
     }
   };
 
-  const count = Math.max(6, Math.min(55, visibleCount));
-  const visible = candles.slice(-count);
-  const firstId = visible.length ? visible[0]!.id : 0;
+  // Determine which candles are in visible view
+  const minIdx = Math.max(0, Math.floor(latestIdx - anchorSlot - 2));
+  const maxIdx = Math.min(totalCandles, Math.ceil(latestIdx - anchorSlot + count + 2));
+  const visible = candles.slice(minIdx, maxIdx);
 
   const insetTop = mobile ? 24 : 60;
   const insetBottom = mobile ? 28 : 38;
 
   const { max, range } = useMemo(() => {
+    if (visible.length === 0) return { max: price + 0.001, range: 0.002 };
     let hi = -Infinity;
     let lo = Infinity;
     for (const c of visible) {
@@ -1417,15 +1684,14 @@ function ChartGrid({ mobile = false }: { mobile?: boolean }) {
     }
     const padVal = (hi - lo) * 0.1 || 0.0004;
     return { max: hi + padVal, range: hi - lo + padVal * 2 };
-  }, [visible]);
+  }, [visible, price]);
 
   const frac = (p: number) => Math.min(1, Math.max(0, (max - p) / range));
   const yCss = (f: number) =>
     `calc(${insetTop}px + (100% - ${insetTop + insetBottom}px) * ${f})`;
 
-  const step = 100 / count;
-  const highest = Math.max(...visible.map((c) => c.h));
-  const lowest = Math.min(...visible.map((c) => c.l));
+  const highest = visible.length > 0 ? Math.max(...visible.map((c) => c.h)) : price;
+  const lowest = visible.length > 0 ? Math.min(...visible.map((c) => c.l)) : price;
 
   const openTrade = trades.find(
     (t) => t.status === "open" && t.account === account
@@ -1447,14 +1713,83 @@ function ChartGrid({ mobile = false }: { mobile?: boolean }) {
         : "19:54:41"
       : fmtClock(new Date(now));
 
-  const markers = trades.filter(
-    (t) => t.account === account && t.candleId >= firstId && t.status === "open"
-  );
   const priceFormatted = price.toFixed(selectedPair.decimals);
   const labelCount = mobile ? 5 : 7;
   const openTradesCount = trades.filter(
     (t) => t.status === "open" && t.account === account
   ).length;
+
+  // Compute indicators across full candle series
+  const closePrices = useMemo(() => candles.map((c) => c.c), [candles]);
+
+  interface ComputedIndicator extends ActiveIndicator {
+    upper?: (number | null)[];
+    middle?: (number | null)[];
+    lower?: (number | null)[];
+  }
+
+  const computedIndicators: ComputedIndicator[] = useMemo(() => {
+    const list: ComputedIndicator[] = [];
+    activeIndicators
+      .filter((ind) => ind.visible)
+      .forEach((ind) => {
+        if (ind.type === "keltner") {
+          const ema = calcEMA(closePrices, ind.period || 20);
+          const atr = calcATR(candles, ind.param2 || 10);
+          const mult = ind.param3 || 1;
+          list.push({
+            ...ind,
+            upper: ema.map((v, i) => (v !== null && atr[i] !== null ? v + mult * atr[i]! : null)),
+            middle: ema,
+            lower: ema.map((v, i) => (v !== null && atr[i] !== null ? v - mult * atr[i]! : null)),
+          });
+        } else if (ind.type === "envelopes") {
+          const sma = calcSMA(closePrices, ind.period || 20);
+          const dev = (ind.param2 || 0.1) / 100;
+          list.push({
+            ...ind,
+            upper: sma.map((v) => (v !== null ? v * (1 + dev) : null)),
+            middle: sma,
+            lower: sma.map((v) => (v !== null ? v * (1 - dev) : null)),
+          });
+        } else if (ind.type === "bollinger") {
+          const sma = calcSMA(closePrices, ind.period || 20);
+          const std = calcStdDev(closePrices, ind.period || 20, sma);
+          const mult = ind.param2 || 2;
+          list.push({
+            ...ind,
+            upper: sma.map((v, i) => (v !== null && std[i] !== null ? v + mult * std[i]! : null)),
+            middle: sma,
+            lower: sma.map((v, i) => (v !== null && std[i] !== null ? v - mult * std[i]! : null)),
+          });
+        } else if (ind.type === "ma") {
+          const ma = ind.param2 === 1 ? calcEMA(closePrices, ind.period || 14) : calcSMA(closePrices, ind.period || 14);
+          list.push({
+            ...ind,
+            middle: ma,
+          });
+        }
+      });
+    return list;
+  }, [activeIndicators, closePrices, candles]);
+
+  // Indicator handlers
+  const toggleIndicatorVisible = (id: string) => {
+    setActiveIndicators((prev) =>
+      prev.map((ind) => (ind.id === id ? { ...ind, visible: !ind.visible } : ind))
+    );
+  };
+
+  const removeIndicator = (id: string) => {
+    setActiveIndicators((prev) => prev.filter((ind) => ind.id !== id));
+  };
+
+  const openIndicatorConfig = (ind: ActiveIndicator) => {
+    if (ind.type === "keltner") setKeltnerConfigOpen(true);
+    else if (ind.type === "envelopes") setEnvelopesConfigOpen(true);
+    else if (ind.type === "bollinger") setBollingerConfigOpen(true);
+    else if (ind.type === "ma") setMaConfigOpen(true);
+  };
 
   return (
     <div
@@ -1475,6 +1810,10 @@ function ChartGrid({ mobile = false }: { mobile?: boolean }) {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
       onWheel={handleWheel}
     >
       <div className="grid-lines" />
@@ -1512,71 +1851,101 @@ function ChartGrid({ mobile = false }: { mobile?: boolean }) {
         {lowest.toFixed(selectedPair.decimals)}
       </span>
 
-      {/* Keltner Channel Overlay (Screenshot 18) */}
-      {keltnerActive && (
-        <>
-          <div className="keltner-pill-badge">
-            <ChevronRight size={12} className="rotate-180" />
-            <Eye size={12} />
-            <span>KELTNER CHANNEL</span>
-            <div className="w-2.5 h-2.5 rounded bg-red-500" />
-            <div className="w-2.5 h-2.5 rounded bg-red-500" />
-            <div className="w-2.5 h-2.5 rounded bg-green-500" />
-            <span>20 10</span>
-            <Pencil size={11} className="cursor-pointer" />
+      {/* Active Indicator Badges List */}
+      <div className="indicator-badges-list">
+        {activeIndicators.map((ind) => (
+          <div key={ind.id} className="indicator-pill-badge">
+            <ChevronRight size={12} className="rotate-180 text-muted-foreground" />
+            <Eye
+              size={12}
+              className={`cursor-pointer ${ind.visible ? "text-white" : "text-muted-foreground"}`}
+              onClick={() => toggleIndicatorVisible(ind.id)}
+            />
+            <span>{ind.name}</span>
+            {ind.colors.map((c, i) => (
+              <div key={i} className="w-2.5 h-2.5 rounded" style={{ background: c }} />
+            ))}
+            <span>
+              {ind.period} {ind.param2 ? `${ind.param2}${ind.type === "envelopes" ? "%" : ""}` : ""}
+            </span>
+            <Pencil
+              size={11}
+              className="cursor-pointer hover:text-white"
+              onClick={() => openIndicatorConfig(ind)}
+            />
             <X
               size={11}
-              className="cursor-pointer text-red-400"
-              onClick={() => setKeltnerActive(false)}
+              className="cursor-pointer text-red-400 hover:text-red-300"
+              onClick={() => removeIndicator(ind.id)}
             />
           </div>
-          <svg className="keltner-line-svg">
-            <path
-              d={visible
-                .map(
-                  (c, i) =>
-                    `${i === 0 ? "M" : "L"} ${(i + 0.5) * (100 / count)}% ${
-                      frac(c.h + 0.0002) * 100
-                    }%`
-                )
-                .join(" ")}
-              fill="none"
-              stroke="#22c55e"
-              strokeWidth="1.5"
-            />
-            <path
-              d={visible
-                .map(
-                  (c, i) =>
-                    `${i === 0 ? "M" : "L"} ${(i + 0.5) * (100 / count)}% ${
-                      frac((c.h + c.l) / 2) * 100
-                    }%`
-                )
-                .join(" ")}
-              fill="none"
-              stroke="#ef4444"
-              strokeWidth="1"
-            />
-            <path
-              d={visible
-                .map(
-                  (c, i) =>
-                    `${i === 0 ? "M" : "L"} ${(i + 0.5) * (100 / count)}% ${
-                      frac(c.l - 0.0002) * 100
-                    }%`
-                )
-                .join(" ")}
-              fill="none"
-              stroke="#ef4444"
-              strokeWidth="1.5"
-            />
-          </svg>
-        </>
-      )}
+        ))}
+      </div>
+
+      {/* Real Math Indicator SVG Paths */}
+      <svg className="indicator-overlay-svg">
+        {computedIndicators.map((ind) => {
+          if (!ind) return null;
+          const pointsUpper: string[] = [];
+          const pointsMiddle: string[] = [];
+          const pointsLower: string[] = [];
+
+          visible.forEach((c) => {
+            const idx = c.id;
+            const slot = anchorSlot - (latestIdx - idx);
+            if (slot < -1 || slot > count + 1) return;
+            const x = (slot + 0.5) * step;
+
+            if (ind.upper && ind.upper[idx] !== null && ind.upper[idx] !== undefined) {
+              const y = frac(ind.upper[idx]!) * 100;
+              pointsUpper.push(`${pointsUpper.length === 0 ? "M" : "L"} ${x}% ${y}%`);
+            }
+            if (ind.middle && ind.middle[idx] !== null && ind.middle[idx] !== undefined) {
+              const y = frac(ind.middle[idx]!) * 100;
+              pointsMiddle.push(`${pointsMiddle.length === 0 ? "M" : "L"} ${x}% ${y}%`);
+            }
+            if (ind.lower && ind.lower[idx] !== null && ind.lower[idx] !== undefined) {
+              const y = frac(ind.lower[idx]!) * 100;
+              pointsLower.push(`${pointsLower.length === 0 ? "M" : "L"} ${x}% ${y}%`);
+            }
+          });
+
+          return (
+            <g key={ind.id}>
+              {pointsUpper.length > 0 && (
+                <path
+                  d={pointsUpper.join(" ")}
+                  fill="none"
+                  stroke={ind.colors[0] || "#22c55e"}
+                  strokeWidth="1.5"
+                />
+              )}
+              {pointsMiddle.length > 0 && (
+                <path
+                  d={pointsMiddle.join(" ")}
+                  fill="none"
+                  stroke={ind.colors[1] || ind.colors[0] || "#ef4444"}
+                  strokeWidth={ind.type === "ma" ? "2" : "1"}
+                />
+              )}
+              {pointsLower.length > 0 && (
+                <path
+                  d={pointsLower.join(" ")}
+                  fill="none"
+                  stroke={ind.colors[2] || ind.colors[1] || "#ef4444"}
+                  strokeWidth="1.5"
+                />
+              )}
+            </g>
+          );
+        })}
+      </svg>
 
       {/* Candlesticks & Entry Markers */}
       <div className="candles">
-        {visible.map((c, index) => {
+        {visible.map((c) => {
+          const slot = anchorSlot - (latestIdx - c.id);
+          if (slot < -1 || slot > count + 1) return null;
           const top = frac(c.h) * 100;
           const bottom = frac(c.l) * 100;
           const bTop = frac(Math.max(c.o, c.c)) * 100;
@@ -1587,7 +1956,7 @@ function ChartGrid({ mobile = false }: { mobile?: boolean }) {
             <div
               className={`candle ${isUp ? "up" : "down"}`}
               style={{
-                left: `${index * step}%`,
+                left: `${slot * step}%`,
                 width: `${candleW}%`,
                 color: isUp ? candleUpColor : candleDownColor,
               }}
@@ -1599,29 +1968,32 @@ function ChartGrid({ mobile = false }: { mobile?: boolean }) {
           );
         })}
 
-        {markers.map((t) => {
-          const idx = t.candleId - firstId;
-          return (
-            <div
-              key={t.id}
-              className={`trade-marker ${t.dir}`}
-              style={{
-                left: `calc(${idx * step}% + ${mobile ? 3 : 1.2}%)`,
-                top: `${frac(t.entry) * 100}%`,
-              }}
-            >
-              <span>
-                {t.dir === "up" ? (
-                  <ArrowUp size={10} strokeWidth={3} />
-                ) : (
-                  <ArrowDown size={10} strokeWidth={3} />
-                )}
-              </span>
-              <i />
-              <em>${t.stake}</em>
-            </div>
-          );
-        })}
+        {trades
+          .filter((t) => t.account === account && t.status === "open")
+          .map((t) => {
+            const slot = anchorSlot - (latestIdx - t.candleId);
+            if (slot < -1 || slot > count + 1) return null;
+            return (
+              <div
+                key={t.id}
+                className={`trade-marker ${t.dir}`}
+                style={{
+                  left: `calc(${slot * step}% + ${mobile ? 3 : 1.2}%)`,
+                  top: `${frac(t.entry) * 100}%`,
+                }}
+              >
+                <span>
+                  {t.dir === "up" ? (
+                    <ArrowUp size={10} strokeWidth={3} />
+                  ) : (
+                    <ArrowDown size={10} strokeWidth={3} />
+                  )}
+                </span>
+                <i />
+                <em>${t.stake}</em>
+              </div>
+            );
+          })}
       </div>
 
       {/* Vertical Expiry Line */}
@@ -1632,6 +2004,18 @@ function ChartGrid({ mobile = false }: { mobile?: boolean }) {
         <span>{countdown}</span>
         <b>{priceFormatted}</b>
       </div>
+
+      {/* Floating Jump to Live Button when panned back in history */}
+      {panOffset > 1 && (
+        <button
+          className="chart-live-btn"
+          style={{ position: "absolute", bottom: mobile ? 36 : 42, right: 14, zIndex: 20 }}
+          onClick={() => setPanOffset(0)}
+        >
+          <RotateCcw size={12} />
+          <span>Live ({priceFormatted})</span>
+        </button>
+      )}
 
       {/* Trade Result Floating Bubble & Vertical Line (Screenshots 2 & 4) */}
       {tradeResultPopup && (
@@ -1715,7 +2099,7 @@ function ChartGrid({ mobile = false }: { mobile?: boolean }) {
         ))}
       </div>
 
-      {/* Floating Chart Left Tool Rails (Screenshots 1 - 4 & 13 - 21) */}
+      {/* Floating Chart Left Tool Rails */}
       <div className="chart-tool-rail">
         <button
           className={`chart-tool-btn ${chartToolsExpanded ? "active" : ""}`}
@@ -1889,28 +2273,28 @@ function TradePanel() {
   const payout = `${fmtMoney(effectiveStake * (1 + selectedPair.profit1m / 100))} $`;
 
   return (
-    <aside className="trade-panel">
-      <div className="param-grid">
+    <aside className="right-column">
+      <div className="trade-panel">
         <TimeBox />
         <StakeBox />
-      </div>
 
-      <div className="payout">
-        <span>Payout</span>
-        <i />
-        <strong>{payout}</strong>
-      </div>
+        <div className="payout">
+          <span>Payout</span>
+          <i />
+          <strong>{payout}</strong>
+        </div>
 
-      <ActionButtons />
+        <ActionButtons />
 
-      <div className="pending" onClick={togglePendingTrade}>
-        <span>PENDING TRADE</span>
-        <div className={`pending-switch ${pendingTrade ? "active" : ""}`}>
-          <div className="pending-switch-knob" />
+        <div className="pending" onClick={togglePendingTrade}>
+          <span>PENDING TRADE</span>
+          <div className={`pending-switch ${pendingTrade ? "active" : ""}`}>
+            <div className="pending-switch-knob" />
+          </div>
         </div>
       </div>
 
-      <div className="trades-section">
+      <div className="trades-panel">
         <div className="trades-head">
           <b>Trades</b>
           <span>{trades.length}</span>
@@ -2141,6 +2525,138 @@ function DesktopPaymentsView() {
             ))}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Mobile "Payments" View (Screenshots 223404 & 223415) ---------------- */
+function MobilePaymentsView() {
+  const { paymentsList, setCurrentView } = useT();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  return (
+    <div className="mobile-view-wrapper">
+      <div className="mobile-dropdown-container">
+        <div
+          className="mobile-dropdown-header select-none"
+          onClick={() => setDropdownOpen((o) => !o)}
+        >
+          <span>Payments</span>
+          {dropdownOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </div>
+
+        {dropdownOpen && (
+          <div className="mobile-dropdown-menu">
+            <div
+              className="mobile-dropdown-item"
+              onClick={() => {
+                setDropdownOpen(false);
+                setCurrentView("withdrawal");
+              }}
+            >
+              Withdrawal
+            </div>
+            <div
+              className="mobile-dropdown-item"
+              onClick={() => {
+                setDropdownOpen(false);
+                setCurrentView("trading");
+              }}
+            >
+              Trades
+            </div>
+            <div
+              className="mobile-dropdown-item"
+              onClick={() => {
+                setDropdownOpen(false);
+                setCurrentView("account");
+              }}
+            >
+              My account
+            </div>
+            <div
+              className="mobile-dropdown-item"
+              onClick={() => {
+                setDropdownOpen(false);
+                setCurrentView("trading");
+              }}
+            >
+              Market
+            </div>
+            <div
+              className="mobile-dropdown-item"
+              onClick={() => {
+                setDropdownOpen(false);
+                setCurrentView("leaderboard");
+              }}
+            >
+              Tournaments
+            </div>
+            <div
+              className="mobile-dropdown-item"
+              onClick={() => {
+                setDropdownOpen(false);
+                setCurrentView("analytics");
+              }}
+            >
+              Analytics
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="mobile-payments-list">
+        <div className="mobile-payments-head">
+          <span>Transaction ID</span>
+          <span>Amount</span>
+        </div>
+
+        {paymentsList.map((p) => (
+          <div className="mobile-payment-item" key={p.id}>
+            <div className="mobile-payment-row">
+              <div className="mobile-payment-left">
+                <b>{p.id}</b>
+                <small>{p.dateTime}</small>
+                <span
+                  className={
+                    p.status === "Successed"
+                      ? "text-green-500 font-bold text-xs"
+                      : p.status === "Pending"
+                      ? "text-yellow-400 font-bold text-xs"
+                      : p.status === "Processing"
+                      ? "text-sky-400 font-bold text-xs"
+                      : "text-red-500 font-bold text-xs"
+                  }
+                >
+                  {p.status}
+                </span>
+              </div>
+              <div className="mobile-payment-right">
+                <b
+                  className={
+                    p.amount.startsWith("+")
+                      ? "text-green-500 font-bold"
+                      : "text-red-500 font-bold"
+                  }
+                >
+                  {p.amount}
+                </b>
+                <small className="text-muted-foreground">{p.system}</small>
+                <small className="text-muted-foreground">{p.type}</small>
+              </div>
+            </div>
+
+            {(p.status === "Processing" || p.status === "Pending") && (
+              <div className="mobile-payment-notice">
+                Please note that payments with this method could take up to 24
+                hours to get processed. If it's not on your balance by that time
+                - please submit a support ticket. The status may appear as
+                «Failed» until the funds are actually received on our side.
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -3513,7 +4029,7 @@ function MobileScreen() {
 
       {currentView === "account" && <MobileAccountView />}
       {currentView === "withdrawal" && <InteractiveMobileWithdrawalView />}
-      {currentView === "payments" && <DesktopPaymentsView />}
+      {currentView === "payments" && <MobilePaymentsView />}
       {currentView === "help" && <HelpScreenView />}
       {currentView === "more" && <MobileMoreView />}
       {currentView === "leaderboard" && (
@@ -3546,9 +4062,15 @@ function TradingScreen() {
     handleProceedDeposit,
     indicatorsModalOpen,
     setIndicatorsModalOpen,
-    setKeltnerConfigOpen,
     keltnerConfigOpen,
-    setKeltnerActive,
+    setKeltnerConfigOpen,
+    envelopesConfigOpen,
+    setEnvelopesConfigOpen,
+    bollingerConfigOpen,
+    setBollingerConfigOpen,
+    maConfigOpen,
+    setMaConfigOpen,
+    setActiveIndicators,
     drawingsModalOpen,
     setDrawingsModalOpen,
   } = state;
@@ -3604,10 +4126,55 @@ function TradingScreen() {
         {/* Indicators List Modal (Screenshot 16/17) */}
         {indicatorsModalOpen && (
           <IndicatorsModal
-            onSelectKeltner={() => {
+            onSelectIndicator={(name) => {
               setIndicatorsModalOpen(false);
-              setKeltnerConfigOpen(true);
+              if (name === "Keltner channel") {
+                setKeltnerConfigOpen(true);
+              } else if (name === "Envelopes") {
+                setEnvelopesConfigOpen(true);
+              } else if (name === "Bollinger Bands") {
+                setBollingerConfigOpen(true);
+              } else if (name === "Moving Average") {
+                setMaConfigOpen(true);
+              } else if (name === "Donchian channel") {
+                setActiveIndicators((prev) => [
+                  ...prev,
+                  {
+                    id: `donchian-${Date.now()}`,
+                    type: "donchian",
+                    name: "DONCHIAN CHANNEL",
+                    period: 20,
+                    colors: ["#3b82f6", "#eab308", "#3b82f6"],
+                    visible: true,
+                  },
+                ]);
+              } else if (name === "Alligator") {
+                setActiveIndicators((prev) => [
+                  ...prev,
+                  {
+                    id: `alligator-${Date.now()}`,
+                    type: "alligator",
+                    name: "ALLIGATOR",
+                    period: 13,
+                    colors: ["#3b82f6", "#ef4444", "#22c55e"],
+                    visible: true,
+                  },
+                ]);
+              } else {
+                setActiveIndicators((prev) => [
+                  ...prev,
+                  {
+                    id: `ind-${Date.now()}`,
+                    type: "ma",
+                    name: name.toUpperCase(),
+                    period: 14,
+                    colors: ["#facc15"],
+                    visible: true,
+                  },
+                ]);
+              }
             }}
+            onDeleteAll={() => setActiveIndicators([])}
             onClose={() => setIndicatorsModalOpen(false)}
           />
         )}
@@ -3615,12 +4182,105 @@ function TradingScreen() {
         {/* Keltner Channel Config Modal (Screenshot 17) */}
         {keltnerConfigOpen && (
           <KeltnerConfigModal
-            onApply={() => {
-              setKeltnerActive(true);
+            onApply={(ema, atr, mult) => {
+              setActiveIndicators((prev) => [
+                ...prev.filter((i) => i.id !== "keltner-init" && i.type !== "keltner"),
+                {
+                  id: `keltner-${Date.now()}`,
+                  type: "keltner",
+                  name: "KELTNER CHANNEL",
+                  period: ema,
+                  param2: atr,
+                  param3: mult,
+                  colors: ["#22c55e", "#ef4444", "#ef4444"],
+                  visible: true,
+                },
+              ]);
               setKeltnerConfigOpen(false);
             }}
-            onBack={() => setKeltnerConfigOpen(false)}
+            onBack={() => {
+              setKeltnerConfigOpen(false);
+              setIndicatorsModalOpen(true);
+            }}
             onClose={() => setKeltnerConfigOpen(false)}
+          />
+        )}
+
+        {/* Envelopes Config Modal */}
+        {envelopesConfigOpen && (
+          <EnvelopesConfigModal
+            onApply={(period, deviation) => {
+              setActiveIndicators((prev) => [
+                ...prev.filter((i) => i.type !== "envelopes"),
+                {
+                  id: `envelopes-${Date.now()}`,
+                  type: "envelopes",
+                  name: "ENVELOPES",
+                  period,
+                  param2: deviation,
+                  colors: ["#06b6d4", "#eab308", "#3b82f6"],
+                  visible: true,
+                },
+              ]);
+              setEnvelopesConfigOpen(false);
+            }}
+            onBack={() => {
+              setEnvelopesConfigOpen(false);
+              setIndicatorsModalOpen(true);
+            }}
+            onClose={() => setEnvelopesConfigOpen(false)}
+          />
+        )}
+
+        {/* Bollinger Bands Config Modal */}
+        {bollingerConfigOpen && (
+          <BollingerConfigModal
+            onApply={(period, deviation) => {
+              setActiveIndicators((prev) => [
+                ...prev.filter((i) => i.type !== "bollinger"),
+                {
+                  id: `bollinger-${Date.now()}`,
+                  type: "bollinger",
+                  name: "BOLLINGER BANDS",
+                  period,
+                  param2: deviation,
+                  colors: ["#818cf8", "#f59e0b", "#818cf8"],
+                  visible: true,
+                },
+              ]);
+              setBollingerConfigOpen(false);
+            }}
+            onBack={() => {
+              setBollingerConfigOpen(false);
+              setIndicatorsModalOpen(true);
+            }}
+            onClose={() => setBollingerConfigOpen(false)}
+          />
+        )}
+
+        {/* Moving Average Config Modal */}
+        {maConfigOpen && (
+          <MAConfigModal
+            onApply={(period, type) => {
+              setActiveIndicators((prev) => [
+                ...prev,
+                {
+                  id: `ma-${Date.now()}`,
+                  type: "ma",
+                  name: `${type} ${period}`,
+                  period,
+                  param2: type === "EMA" ? 1 : 0,
+                  colors: ["#fbbf24"],
+                  visible: true,
+                },
+              ]);
+              setMaConfigOpen(false);
+            }}
+            onBack={() => {
+              setMaConfigOpen(false);
+              setIndicatorsModalOpen(true);
+            }}
+            onClose={() => setMaConfigOpen(false)}
           />
         )}
 

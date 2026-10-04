@@ -62,10 +62,12 @@ export function ChartTypePopover({
 }
 
 export function IndicatorsModal({
-  onSelectKeltner,
+  onSelectIndicator,
+  onDeleteAll,
   onClose,
 }: {
-  onSelectKeltner: () => void;
+  onSelectIndicator: (name: string) => void;
+  onDeleteAll: () => void;
   onClose: () => void;
 }) {
   const trend = [
@@ -102,9 +104,7 @@ export function IndicatorsModal({
           <div
             key={name}
             className="indicator-list-row"
-            onClick={() => {
-              if (name === "Keltner channel") onSelectKeltner();
-            }}
+            onClick={() => onSelectIndicator(name)}
           >
             <span>{name}</span>
             <ChevronRight size={16} className="text-muted-foreground" />
@@ -113,15 +113,77 @@ export function IndicatorsModal({
 
         <div className="indicator-section-head">OSCILLATORS</div>
         {oscillators.map((name) => (
-          <div key={name} className="indicator-list-row">
+          <div
+            key={name}
+            className="indicator-list-row"
+            onClick={() => onSelectIndicator(name)}
+          >
             <span>{name}</span>
             <ChevronRight size={16} className="text-muted-foreground" />
           </div>
         ))}
 
-        <button className="w-full h-11 rounded-lg bg-[oklch(0.24_0.026_273)] text-red-500 font-bold text-sm flex items-center justify-center gap-2 mt-6">
+        <button
+          className="w-full h-11 rounded-lg bg-[oklch(0.24_0.026_273)] text-red-500 font-bold text-sm flex items-center justify-center gap-2 mt-6 cursor-pointer hover:bg-red-500/20"
+          onClick={onDeleteAll}
+        >
           <Trash2 size={16} /> Delete all
         </button>
+      </div>
+    </div>
+  );
+}
+
+export function EnvelopesConfigModal({
+  onApply,
+  onBack,
+  onClose,
+}: {
+  onApply: (period: number, deviation: number) => void;
+  onBack: () => void;
+  onClose: () => void;
+}) {
+  const [period, setPeriod] = useState(20);
+  const [deviation, setDeviation] = useState(0.1);
+
+  return (
+    <div className="keltner-config-overlay" onClick={onClose}>
+      <div className="w-full max-w-md mx-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="deposit-header">
+          <div className="flex items-center gap-2 cursor-pointer text-base" onClick={onBack}>
+            <ArrowLeft size={20} />
+            <span>Indicators</span>
+          </div>
+          <X size={22} className="cursor-pointer text-muted-foreground hover:text-white" onClick={onClose} />
+        </div>
+
+        <div className="text-lg font-bold text-white mb-4">Envelopes</div>
+
+        <div className="custom-field">
+          <span className="field-tag">Period</span>
+          <button className="text-muted-foreground" onClick={() => setPeriod((p) => Math.max(1, p - 1))}>-</button>
+          <span className="font-bold">{period}</span>
+          <button className="text-muted-foreground" onClick={() => setPeriod((p) => p + 1)}>+</button>
+        </div>
+
+        <div className="custom-field">
+          <span className="field-tag">Deviation (%)</span>
+          <button className="text-muted-foreground" onClick={() => setDeviation((d) => Math.max(0.01, Number((d - 0.02).toFixed(2))))}>-</button>
+          <span className="font-bold">{deviation}%</span>
+          <button className="text-muted-foreground" onClick={() => setDeviation((d) => Number((d + 0.02).toFixed(2)))}>+</button>
+        </div>
+
+        <div className="flex gap-2 mt-6">
+          <button className="w-12 h-11 rounded-lg bg-[oklch(0.24_0.026_273)] text-red-500 flex items-center justify-center">
+            <Trash2 size={16} />
+          </button>
+          <button
+            className="flex-1 h-11 rounded-lg bg-green-500 text-white font-bold text-sm flex items-center justify-center gap-2"
+            onClick={() => onApply(period, deviation)}
+          >
+            <Check size={16} strokeWidth={3} /> Ok
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -132,7 +194,7 @@ export function KeltnerConfigModal({
   onBack,
   onClose,
 }: {
-  onApply: () => void;
+  onApply: (ema: number, atr: number, mult: number) => void;
   onBack: () => void;
   onClose: () => void;
 }) {
@@ -215,7 +277,131 @@ export function KeltnerConfigModal({
           <button className="w-12 h-11 rounded-lg bg-[oklch(0.24_0.026_273)] text-red-500 flex items-center justify-center">
             <Trash2 size={16} />
           </button>
-          <button className="flex-1 h-11 rounded-lg bg-green-500 text-white font-bold text-sm flex items-center justify-center gap-2" onClick={onApply}>
+          <button
+            className="flex-1 h-11 rounded-lg bg-green-500 text-white font-bold text-sm flex items-center justify-center gap-2"
+            onClick={() => onApply(ema, atr, mult)}
+          >
+            <Check size={16} strokeWidth={3} /> Ok
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function BollingerConfigModal({
+  onApply,
+  onBack,
+  onClose,
+}: {
+  onApply: (period: number, deviation: number) => void;
+  onBack: () => void;
+  onClose: () => void;
+}) {
+  const [period, setPeriod] = useState(20);
+  const [deviation, setDeviation] = useState(2);
+
+  return (
+    <div className="keltner-config-overlay" onClick={onClose}>
+      <div className="w-full max-w-md mx-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="deposit-header">
+          <div className="flex items-center gap-2 cursor-pointer text-base" onClick={onBack}>
+            <ArrowLeft size={20} />
+            <span>Indicators</span>
+          </div>
+          <X size={22} className="cursor-pointer text-muted-foreground hover:text-white" onClick={onClose} />
+        </div>
+
+        <div className="text-lg font-bold text-white mb-4">Bollinger Bands</div>
+
+        <div className="custom-field">
+          <span className="field-tag">Period</span>
+          <button className="text-muted-foreground" onClick={() => setPeriod((p) => Math.max(1, p - 1))}>-</button>
+          <span className="font-bold">{period}</span>
+          <button className="text-muted-foreground" onClick={() => setPeriod((p) => p + 1)}>+</button>
+        </div>
+
+        <div className="custom-field">
+          <span className="field-tag">Deviation</span>
+          <button className="text-muted-foreground" onClick={() => setDeviation((d) => Math.max(1, d - 1))}>-</button>
+          <span className="font-bold">{deviation}</span>
+          <button className="text-muted-foreground" onClick={() => setDeviation((d) => d + 1)}>+</button>
+        </div>
+
+        <div className="flex gap-2 mt-6">
+          <button className="w-12 h-11 rounded-lg bg-[oklch(0.24_0.026_273)] text-red-500 flex items-center justify-center">
+            <Trash2 size={16} />
+          </button>
+          <button
+            className="flex-1 h-11 rounded-lg bg-green-500 text-white font-bold text-sm flex items-center justify-center gap-2"
+            onClick={() => onApply(period, deviation)}
+          >
+            <Check size={16} strokeWidth={3} /> Ok
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function MAConfigModal({
+  onApply,
+  onBack,
+  onClose,
+}: {
+  onApply: (period: number, type: "SMA" | "EMA") => void;
+  onBack: () => void;
+  onClose: () => void;
+}) {
+  const [period, setPeriod] = useState(14);
+  const [type, setType] = useState<"SMA" | "EMA">("SMA");
+
+  return (
+    <div className="keltner-config-overlay" onClick={onClose}>
+      <div className="w-full max-w-md mx-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="deposit-header">
+          <div className="flex items-center gap-2 cursor-pointer text-base" onClick={onBack}>
+            <ArrowLeft size={20} />
+            <span>Indicators</span>
+          </div>
+          <X size={22} className="cursor-pointer text-muted-foreground hover:text-white" onClick={onClose} />
+        </div>
+
+        <div className="text-lg font-bold text-white mb-4">Moving Average</div>
+
+        <div className="custom-field">
+          <span className="field-tag">Period</span>
+          <button className="text-muted-foreground" onClick={() => setPeriod((p) => Math.max(1, p - 1))}>-</button>
+          <span className="font-bold">{period}</span>
+          <button className="text-muted-foreground" onClick={() => setPeriod((p) => p + 1)}>+</button>
+        </div>
+
+        <div className="custom-field">
+          <span className="field-tag">Type</span>
+          <div className="flex gap-2">
+            <button
+              className={`px-3 py-1 rounded text-xs font-bold ${type === "SMA" ? "bg-blue-600 text-white" : "bg-[oklch(0.24_0.026_273)] text-muted-foreground"}`}
+              onClick={() => setType("SMA")}
+            >
+              SMA
+            </button>
+            <button
+              className={`px-3 py-1 rounded text-xs font-bold ${type === "EMA" ? "bg-blue-600 text-white" : "bg-[oklch(0.24_0.026_273)] text-muted-foreground"}`}
+              onClick={() => setType("EMA")}
+            >
+              EMA
+            </button>
+          </div>
+        </div>
+
+        <div className="flex gap-2 mt-6">
+          <button className="w-12 h-11 rounded-lg bg-[oklch(0.24_0.026_273)] text-red-500 flex items-center justify-center">
+            <Trash2 size={16} />
+          </button>
+          <button
+            className="flex-1 h-11 rounded-lg bg-green-500 text-white font-bold text-sm flex items-center justify-center gap-2"
+            onClick={() => onApply(period, type)}
+          >
             <Check size={16} strokeWidth={3} /> Ok
           </button>
         </div>

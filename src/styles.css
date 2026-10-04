@@ -2253,22 +2253,56 @@ button {
   overflow-y: auto;
   background: var(--background);
 }
-.mobile-dropdown-header {
-  height: 40px;
+.mobile-dropdown-container {
+  position: relative;
   margin: 10px 12px 14px;
-  padding: 0 14px;
+}
+.mobile-dropdown-header {
+  height: 42px;
+  padding: 0 16px;
   background: oklch(0.24 0.028 273);
   border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   color: #fff;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   cursor: pointer;
+  transition: background-color 0.15s;
+}
+.mobile-dropdown-header:hover {
+  background: oklch(0.28 0.03 273);
 }
 .mobile-dropdown-header svg {
   color: var(--muted-foreground);
+}
+.mobile-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: oklch(0.20 0.026 273);
+  border: 1px solid oklch(0.30 0.025 272);
+  border-radius: 6px;
+  z-index: 50;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+.mobile-dropdown-item {
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  border-bottom: 1px solid oklch(0.26 0.02 272 / 0.6);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+.mobile-dropdown-item:last-child {
+  border-bottom: none;
+}
+.mobile-dropdown-item:hover {
+  background: oklch(0.26 0.03 273);
 }
 
 /* Mobile More Screen (Screenshots 8 & 11) */
@@ -2452,10 +2486,15 @@ button {
 }
 .mobile-payment-item {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   padding: 14px 4px;
   border-bottom: 1px solid oklch(0.24 0.02 272 / 0.5);
   font-size: 13px;
+}
+.mobile-payment-row {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
 }
 .mobile-payment-left {
   display: flex;
@@ -2480,6 +2519,15 @@ button {
 }
 .mobile-payment-right small {
   color: var(--muted-foreground);
+}
+.mobile-payment-notice {
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: oklch(0.20 0.022 273);
+  border-radius: 8px;
+  color: oklch(0.85 0.01 270);
+  font-size: 11.5px;
+  line-height: 1.45;
 }
 
 /* ==========================================================================
@@ -3028,8 +3076,9 @@ button {
   cursor: pointer;
 }
 
-/* Keltner Channel Lines on Chart (Screenshot 18) */
-.keltner-line-svg {
+/* Indicators Overlay & Badges */
+.keltner-line-svg,
+.indicator-overlay-svg {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -3037,10 +3086,17 @@ button {
   pointer-events: none;
   z-index: 3;
 }
-.keltner-pill-badge {
+.indicator-badges-list {
   position: absolute;
   left: 60px;
-  top: 50px;
+  top: 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 10;
+}
+.keltner-pill-badge,
+.indicator-pill-badge {
   background: oklch(0.18 0.022 274);
   border: 1px solid oklch(0.3 0.02 272);
   border-radius: 4px;
@@ -3051,13 +3107,66 @@ button {
   font-size: 10px;
   font-weight: 800;
   color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.chart-ohlc-overlay {
+  position: absolute;
+  left: 60px;
+  bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 10.5px;
+  color: oklch(0.72 0.01 270);
+  font-family: monospace;
+  pointer-events: none;
+  z-index: 6;
+}
+.chart-center-controls {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
   z-index: 10;
+}
+.chart-time-box {
+  background: #fff;
+  color: #000;
+  font-weight: 800;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-family: monospace;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  letter-spacing: 0.02em;
+}
+.chart-live-btn {
+  background: var(--blue);
+  color: #fff;
+  font-weight: 700;
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 /* Touch zoom / pan support on Chart area */
 .chart-grid {
   touch-action: none;
   user-select: none;
+  cursor: grab;
+}
+.chart-grid:active {
+  cursor: grabbing;
 }
 
 /* ==========================================================================
