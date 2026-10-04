@@ -1,17 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
   ArrowDown,
+  ArrowRight,
   ArrowUp,
+  BarChart3,
   Bell,
+  Briefcase,
   BriefcaseBusiness,
+  Check,
   ChevronDown,
+  ChevronRight,
   ChevronUp,
   CircleHelp,
   Clock3,
   Compass,
   Eye,
+  GraduationCap,
+  Headphones,
   Image as ImageIcon,
+  LayoutGrid,
   LineChart,
+  Lock,
   LogOut,
   Maximize,
   Menu,
@@ -19,12 +28,17 @@ import {
   Minus,
   MoreHorizontal,
   Pencil,
+  PieChart,
   Plus,
+  Radio,
   RefreshCw,
   Settings,
+  ShoppingBag,
+  Trash2,
   Trophy,
   UserRound,
   Volume2,
+  X,
 } from "lucide-react";
 import {
   createContext,
@@ -118,6 +132,98 @@ export const PAIRS = [
   },
 ] as const;
 
+/* ---------------- Mock Payments Transactions (Screenshots 4 & 12) ---------------- */
+const PAYMENTS_DATA = [
+  {
+    id: "132049457",
+    dateTime: "03/10/2026, 19:50:55",
+    status: "Successed" as const,
+    type: "Deposit",
+    system: "Binance Pay",
+    amount: "+$69.00",
+  },
+  {
+    id: "131992200",
+    dateTime: "03/10/2026, 03:23:51",
+    status: "Successed" as const,
+    type: "Deposit",
+    system: "Binance Pay",
+    amount: "+$69.00",
+  },
+  {
+    id: "131988479",
+    dateTime: "03/10/2026, 01:36:12",
+    status: "Failed" as const,
+    type: "Deposit",
+    system: "Raast",
+    amount: "+Rs3,000.00",
+  },
+  {
+    id: "131988427",
+    dateTime: "03/10/2026, 01:35:01",
+    status: "Failed" as const,
+    type: "Deposit",
+    system: "Raast",
+    amount: "+Rs5,000.00",
+  },
+  {
+    id: "131710628",
+    dateTime: "30/09/2026, 04:50:33",
+    status: "Successed" as const,
+    type: "Deposit",
+    system: "Binance Pay",
+    amount: "+$66.00",
+  },
+  {
+    id: "131560613",
+    dateTime: "28/09/2026, 15:33:28",
+    status: "Successed" as const,
+    type: "Deposit",
+    system: "USDT (BEP-20)",
+    amount: "+$69.00",
+  },
+  {
+    id: "131480804",
+    dateTime: "27/09/2026, 17:20:04",
+    status: "Successed" as const,
+    type: "Deposit",
+    system: "Raast",
+    amount: "+Rs5,000.00",
+  },
+];
+
+/* ---------------- Timer Presets (Screenshots 1 & 7) ---------------- */
+const TIMER_PRESETS_DESKTOP = [
+  "00:05",
+  "00:10",
+  "00:15",
+  "00:30",
+  "01:00",
+  "02:00",
+  "05:00",
+  "10:00",
+  "15:00",
+  "30:00",
+  "01:00:00",
+  "02:00:00",
+  "04:00:00",
+];
+
+const TIMER_PRESETS_MOBILE = [
+  "00:05",
+  "00:10",
+  "00:15",
+  "00:30",
+  "01:00",
+  "02:00",
+  "05:00",
+  "10:00",
+  "15:00",
+  "30:00",
+  "01:00:00",
+  "02:00:00",
+];
+
 /* ---------------- Market & Trading State ---------------- */
 type Candle = { id: number; o: number; h: number; l: number; c: number };
 type Trade = {
@@ -133,6 +239,9 @@ type Trade = {
   profit: number;
   account: "live" | "demo";
 };
+
+type ViewScreen =
+  "trading" | "account" | "payments" | "withdrawal" | "help" | "more";
 
 const CANDLE_MS = 6000;
 
@@ -170,6 +279,7 @@ const fmtMoney = (n: number) =>
   });
 
 function useTradingState() {
+  const [currentView, setCurrentView] = useState<ViewScreen>("trading");
   const [activePairIndex, setActivePairIndex] = useState(5); // Default to AUD/NZD
   const activePair = PAIRS[activePairIndex] ?? PAIRS[5]!;
 
@@ -186,13 +296,19 @@ function useTradingState() {
   const [stakePercent, setStakePercent] = useState(1);
 
   // Time configuration & switch (clock vs timer duration)
-  const [timeMode, setTimeMode] = useState<"clock" | "timer">("clock");
+  const [timeMode, setTimeMode] = useState<"clock" | "timer">("timer");
+  const [selectedTimerPreset, setSelectedTimerPreset] = useState("01:00");
   const [minutes, setMinutes] = useState(1); // expiration duration in minutes
+  const [timerPopoverOpen, setTimerPopoverOpen] = useState(false);
 
   // Pending trade toggle
-  const [pendingTrade, setPendingTrade] = useState(false);
+  const [pendingTrade, setPendingTrade] = useState(true);
 
-  // Chart zoom level (visible candles count)
+  // Desktop & mobile overlays
+  const [desktopMoreOpen, setDesktopMoreOpen] = useState(false);
+  const [mobileTradesOpen, setMobileTradesOpen] = useState(false);
+
+  // Chart zoom level
   const [visibleCount, setVisibleCount] = useState(20);
 
   const [trades, setTrades] = useState<Trade[]>([
@@ -206,18 +322,31 @@ function useTradingState() {
       rate: 0.79,
       expiresAt: Date.now() - 30000,
       status: "won",
-      profit: 47.4,
+      profit: 55.2,
       account: "live",
     },
     {
       id: 1728042080000,
-      dir: "up",
+      dir: "down",
+      pairName: "AUD/NZD (OTC)",
+      candleId: 14,
+      entry: 1.171,
+      stake: 60,
+      rate: 0.79,
+      expiresAt: Date.now() - 15000,
+      status: "won",
+      profit: 54.6,
+      account: "live",
+    },
+    {
+      id: 1728042100000,
+      dir: "down",
       pairName: "AUD/NZD (OTC)",
       candleId: 18,
       entry: 1.1702,
       stake: 60,
       rate: 0.79,
-      expiresAt: Date.now() + 45000,
+      expiresAt: Date.now() + 85000,
       status: "open",
       profit: 0,
       account: "live",
@@ -352,6 +481,8 @@ function useTradingState() {
     : activePair.basePrice;
 
   return {
+    currentView,
+    setCurrentView,
     candles,
     now,
     account,
@@ -369,11 +500,20 @@ function useTradingState() {
     setStakePercent,
     effectiveStake,
     timeMode,
+    setTimeMode,
     toggleTimeMode,
+    selectedTimerPreset,
+    setSelectedTimerPreset,
     minutes,
     setMinutes,
+    timerPopoverOpen,
+    setTimerPopoverOpen,
     pendingTrade,
     togglePendingTrade,
+    desktopMoreOpen,
+    setDesktopMoreOpen,
+    mobileTradesOpen,
+    setMobileTradesOpen,
     visibleCount,
     zoomIn,
     zoomOut,
@@ -423,9 +563,50 @@ function PairFlags({
   );
 }
 
+/* ---------------- Bull Trader Official Avatar (Screenshots 3 & 9) ---------------- */
+function BullAvatar() {
+  return (
+    <div className="bull-avatar">
+      <svg viewBox="0 0 100 100" className="w-14 h-14" fill="none">
+        <circle cx="50" cy="50" r="46" fill="#090d16" />
+        <path
+          d="M26 38 C32 26 40 22 48 30 C56 22 64 26 70 38 C64 42 60 48 58 56 C54 62 46 62 42 56 C40 48 36 42 26 38 Z"
+          fill="#38bdf8"
+          opacity="0.9"
+        />
+        <path d="M35 44 L42 42 L40 48 Z" fill="#fff" />
+        <path d="M65 44 L58 42 L60 48 Z" fill="#fff" />
+        <path d="M46 52 L50 55 L54 52 Z" fill="#0284c7" />
+        <text
+          x="50"
+          y="74"
+          textAnchor="middle"
+          fill="#38bdf8"
+          fontSize="6.5"
+          fontWeight="900"
+          letterSpacing="0.05em"
+        >
+          BULL TRADER
+        </text>
+        <text
+          x="50"
+          y="82"
+          textAnchor="middle"
+          fill="#94a3b8"
+          fontSize="5"
+          fontWeight="700"
+          letterSpacing="0.08em"
+        >
+          OFFICIAL
+        </text>
+      </svg>
+    </div>
+  );
+}
+
 /* ---------------- Account Switcher Modal ---------------- */
 function AccountMenu({ onClose }: { onClose: () => void }) {
-  const { account, setAccount, balances, setBalances } = useT();
+  const { account, setAccount, balances, setBalances, setCurrentView } = useT();
   return (
     <div className="account-menu" onClick={(e) => e.stopPropagation()}>
       <div className="account-menu-main">
@@ -442,8 +623,8 @@ function AccountMenu({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <div className="am-info">
-          <b>aj400krvade@gmail.com</b>
-          <span>ID: 85404594</span>
+          <b>trader.demo@test.com</b>
+          <span>ID: 10482910</span>
           <p>
             Currency: <b>USD</b> <em>CHANGE</em>
           </p>
@@ -477,7 +658,6 @@ function AccountMenu({ onClose }: { onClose: () => void }) {
               ${fmtMoney(balances.demo)}
               <span
                 className="am-refresh"
-                title="Reset demo balance to $5,000"
                 onClick={(e) => {
                   e.stopPropagation();
                   setBalances((b) => ({ ...b, demo: 5000 }));
@@ -491,13 +671,48 @@ function AccountMenu({ onClose }: { onClose: () => void }) {
         </button>
       </div>
       <nav className="account-menu-links">
-        <span>Deposit</span>
-        <span>Withdrawal</span>
-        <span>Payments</span>
-        <span>Trades</span>
-        <span>My account</span>
+        <span
+          onClick={() => {
+            setCurrentView("withdrawal");
+            onClose();
+          }}
+        >
+          Deposit
+        </span>
+        <span
+          onClick={() => {
+            setCurrentView("withdrawal");
+            onClose();
+          }}
+        >
+          Withdrawal
+        </span>
+        <span
+          onClick={() => {
+            setCurrentView("payments");
+            onClose();
+          }}
+        >
+          Payments
+        </span>
+        <span
+          onClick={() => {
+            setCurrentView("trading");
+            onClose();
+          }}
+        >
+          Trades
+        </span>
+        <span
+          onClick={() => {
+            setCurrentView("account");
+            onClose();
+          }}
+        >
+          My account
+        </span>
         <hr />
-        <span className="logout">
+        <span className="logout" onClick={onClose}>
           <LogOut size={16} />
           Logout
         </span>
@@ -550,7 +765,7 @@ function AccountBlock({ mobile = false }: { mobile?: boolean }) {
 
 function NotificationBadge() {
   return (
-    <div className="notification" title="Notifications">
+    <div className="notification">
       <Bell size={18} />
       <span>66</span>
     </div>
@@ -559,9 +774,15 @@ function NotificationBadge() {
 
 /* ---------------- Desktop Header ---------------- */
 function DesktopHeader() {
+  const { setCurrentView } = useT();
   return (
     <header className="desktop-header">
-      <div className="brand">
+      <div
+        className="brand"
+        onClick={() => setCurrentView("trading")}
+        role="button"
+        tabIndex={0}
+      >
         <span className="brand-mark">◫</span>
         <b>TRADEX</b>
         <i />
@@ -570,63 +791,152 @@ function DesktopHeader() {
       <div className="header-actions">
         <NotificationBadge />
         <AccountBlock />
-        <ScreenButton className="deposit">
+        <ScreenButton
+          className="deposit"
+          onClick={() => setCurrentView("withdrawal")}
+        >
           <Plus size={18} />
           Deposit
         </ScreenButton>
-        <ScreenButton className="withdraw">Withdrawal</ScreenButton>
+        <ScreenButton
+          className="withdraw"
+          onClick={() => setCurrentView("withdrawal")}
+        >
+          Withdrawal
+        </ScreenButton>
       </div>
     </header>
   );
 }
 
+/* ---------------- Desktop "More" Menu Flyout (Screenshot 2) ---------------- */
+function DesktopMoreMenu({ onClose }: { onClose: () => void }) {
+  const { setCurrentView } = useT();
+
+  return (
+    <div className="desktop-more-menu" onClick={(e) => e.stopPropagation()}>
+      <div className="desktop-more-header">
+        <span>More</span>
+        <X
+          size={18}
+          className="cursor-pointer text-muted-foreground hover:text-white"
+          onClick={onClose}
+        />
+      </div>
+
+      <button className="desktop-more-item" onClick={onClose}>
+        <PieChart size={18} />
+        <span>Analytics</span>
+        <ChevronRight size={16} />
+      </button>
+
+      <button className="desktop-more-item" onClick={onClose}>
+        <Briefcase size={18} />
+        <span>TOP</span>
+        <ChevronRight size={16} />
+      </button>
+
+      <button className="desktop-more-item" onClick={onClose}>
+        <Radio size={18} />
+        <span>Signals</span>
+        <ChevronRight size={16} />
+      </button>
+
+      <button
+        className="desktop-more-item"
+        onClick={() => {
+          setCurrentView("account");
+          onClose();
+        }}
+      >
+        <UserRound size={18} />
+        <span>Account</span>
+        <ChevronRight size={16} />
+      </button>
+
+      <button className="desktop-more-item" onClick={onClose}>
+        <Trophy size={18} />
+        <span>Tournaments</span>
+        <span className="item-badge">4</span>
+        <ChevronRight size={16} />
+      </button>
+
+      <button className="desktop-more-item" onClick={onClose}>
+        <ShoppingBag size={18} />
+        <span>Market</span>
+        <span className="item-badge">2</span>
+        <ChevronRight size={16} />
+      </button>
+    </div>
+  );
+}
+
 /* ---------------- Desktop Sidebar Rail ---------------- */
 function DesktopSidebar() {
+  const { currentView, setCurrentView, desktopMoreOpen, setDesktopMoreOpen } =
+    useT();
+
   return (
     <aside className="desktop-sidebar">
-      <span title="Menu">
+      <span>
         <Menu size={22} className="side-menu" />
       </span>
-      <ScreenButton className="side-active" aria-label="Chart">
+      <ScreenButton
+        className={currentView === "trading" ? "side-active" : "side-icon"}
+        aria-label="Chart"
+        onClick={() => setCurrentView("trading")}
+      >
         <ImageIcon size={20} />
       </ScreenButton>
-      <div className="side-icon" title="Help">
+      <div
+        className={currentView === "help" ? "side-active" : "side-icon"}
+        onClick={() => setCurrentView("help")}
+      >
         <CircleHelp size={20} />
       </div>
-      <div className="side-icon" title="Profile">
+      <div
+        className={currentView === "account" ? "side-active" : "side-icon"}
+        onClick={() => setCurrentView("account")}
+      >
         <UserRound size={20} />
       </div>
-      <span className="badge-icon side-icon" title="Tournaments">
+      <span className="badge-icon side-icon">
         <Trophy size={20} />
         <b>4</b>
       </span>
-      <span className="badge-icon side-icon" title="Market">
+      <span className="badge-icon side-icon">
         <span className="coin">$</span>
         <b>2</b>
       </span>
-      <div className="side-icon" title="More">
+      <div
+        className={`side-icon ${desktopMoreOpen ? "text-white" : ""}`}
+        onClick={() => setDesktopMoreOpen((o) => !o)}
+      >
         <MoreHorizontal size={22} />
       </div>
+      {desktopMoreOpen && (
+        <DesktopMoreMenu onClose={() => setDesktopMoreOpen(false)} />
+      )}
       <div className="sidebar-spacer" />
       <div className="utility">
-        <span title="Fullscreen">
+        <span>
           <Maximize size={16} />
         </span>
-        <span title="Popout">➜</span>
+        <span>➜</span>
       </div>
       <div className="utility">
-        <span title="Settings">
+        <span>
           <Settings size={17} />
         </span>
-        <span title="Sound">
+        <span>
           <Volume2 size={18} />
         </span>
       </div>
-      <div className="join" title="Join Telegram Community">
+      <div className="join">
         <MessageSquare size={14} />
         <b>JOIN US</b>
       </div>
-      <div className="help" title="Live Support">
+      <div className="help" onClick={() => setCurrentView("help")}>
         <span>●</span>Help
       </div>
     </aside>
@@ -639,7 +949,7 @@ function PairTabs() {
 
   return (
     <div className="pair-tabs">
-      <ScreenButton className="add-pair" title="Add pair">
+      <ScreenButton className="add-pair">
         <Plus size={18} />
       </ScreenButton>
       {PAIRS.map((pair, index) => {
@@ -665,7 +975,6 @@ function PairTabs() {
                   onClick={(e) => {
                     e.stopPropagation();
                   }}
-                  title="Close tab"
                 >
                   ×
                 </span>
@@ -691,6 +1000,8 @@ function ChartGrid({ mobile = false }: { mobile?: boolean }) {
     visibleCount,
     zoomIn,
     zoomOut,
+    mobileTradesOpen,
+    setMobileTradesOpen,
   } = useT();
 
   const count = mobile ? Math.min(13, visibleCount) : visibleCount;
@@ -733,7 +1044,7 @@ function ChartGrid({ mobile = false }: { mobile?: boolean }) {
         );
   const countdown = `${pad(Math.floor(remaining / 60))}:${pad(remaining % 60)}`;
   const clock =
-    now === null ? (mobile ? "19:09:19" : "19:54:41") : fmtClock(new Date(now));
+    now === null ? (mobile ? "21:07:06" : "19:54:41") : fmtClock(new Date(now));
 
   const markers = trades.filter(
     (t) =>
@@ -850,7 +1161,7 @@ function ChartGrid({ mobile = false }: { mobile?: boolean }) {
       {/* X-Axis Timestamps */}
       <div className="x-labels">
         {(mobile
-          ? ["19:00", "19:04", "19:08", "19:12", "19:16"]
+          ? ["21:00", "21:04", "21:08", "21:12", "21:16"]
           : [
               "19:28",
               "19:32",
@@ -878,16 +1189,14 @@ function ChartGrid({ mobile = false }: { mobile?: boolean }) {
       {/* Left Floating Tools */}
       {!mobile && (
         <div className="chart-tools">
-          <button title="Drawings">
+          <button>
             <Pencil size={15} />
           </button>
-          <button className="active" title="Timeframe">
-            1m
-          </button>
-          <button title="Candlesticks">
+          <button className="active">1m</button>
+          <button>
             <LineChart size={15} />
           </button>
-          <button title="Indicators">
+          <button>
             <Compass size={15} />
           </button>
         </div>
@@ -896,25 +1205,155 @@ function ChartGrid({ mobile = false }: { mobile?: boolean }) {
       {/* Floating Zoom Buttons */}
       {!mobile && (
         <div className="chart-zoom">
-          <button onClick={zoomOut} title="Zoom out">
+          <button onClick={zoomOut}>
             <Minus size={13} />
           </button>
-          <button onClick={zoomIn} title="Zoom in">
+          <button onClick={zoomIn}>
             <Plus size={13} />
           </button>
         </div>
       )}
 
-      {/* Mobile Floating Tools */}
+      {/* Mobile Floating Tools (Screenshot 6: Briefcase button) */}
       {mobile && (
         <div className="mobile-tools">
-          <button title="Tools">•••</button>
-          <span title="Open trades">
+          <button>•••</button>
+          <span
+            className="cursor-pointer"
+            onClick={() => setMobileTradesOpen((o) => !o)}
+          >
             <BriefcaseBusiness size={16} />
-            <b>{trades.filter((t) => t.status === "open").length}</b>
+            {mobileTradesOpen ? (
+              <b className="bg-red-500">
+                <X size={10} />
+              </b>
+            ) : (
+              <b>{trades.filter((t) => t.status === "open").length}</b>
+            )}
           </span>
         </div>
       )}
+
+      {/* Mobile Trades Sheet Drawer (Screenshot 6) */}
+      {mobile && mobileTradesOpen && (
+        <div className="mobile-trades-drawer">
+          <div className="trades-head">
+            <div className="flex items-center gap-4">
+              <span className="font-bold text-white text-xs border-b-2 border-blue-500 pb-1">
+                Trades 0
+              </span>
+              <span className="flex items-center gap-1 text-muted-foreground text-xs pb-1">
+                <Clock3 size={13} /> 0
+              </span>
+            </div>
+            <X
+              size={16}
+              className="text-muted-foreground cursor-pointer"
+              onClick={() => setMobileTradesOpen(false)}
+            />
+          </div>
+          <div className="trade-date">
+            4 OCTOBER <i>6</i>
+          </div>
+          {trades.map((t) => (
+            <div className="trade-item" key={t.id}>
+              <div className="trade-row">
+                <ChevronDown size={14} />
+                <PairFlags flags={["🇦🇺", "🇳🇿"]} compact />
+                <b>AUD/NZD (OTC)</b>
+                <span>00:01:25</span>
+              </div>
+              <div className={`trade-result ${t.dir}`}>
+                <span>
+                  {t.dir === "up" ? "↑" : "↓"} {t.stake} $
+                </span>
+                <b className={t.status === "won" ? "won" : ""}>
+                  {t.status === "won" ? "+115.20 $" : "+114.60 $"}
+                </b>
+              </div>
+            </div>
+          ))}
+          <div className="text-center pt-2">
+            <ChevronUp
+              size={16}
+              className="mx-auto text-muted-foreground cursor-pointer"
+              onClick={() => setMobileTradesOpen(false)}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- Timer Presets Popover (Screenshots 1 & 7) ---------------- */
+function TimerPresetsPopover({
+  mobile = false,
+  onClose,
+}: {
+  mobile?: boolean;
+  onClose: () => void;
+}) {
+  const {
+    timeMode,
+    setTimeMode,
+    selectedTimerPreset,
+    setSelectedTimerPreset,
+    setMinutes,
+  } = useT();
+
+  const presets = mobile ? TIMER_PRESETS_MOBILE : TIMER_PRESETS_DESKTOP;
+
+  const handleSelect = (val: string) => {
+    setSelectedTimerPreset(val);
+    if (val === "00:05") setMinutes(0.083);
+    else if (val === "00:10") setMinutes(0.166);
+    else if (val === "00:15") setMinutes(0.25);
+    else if (val === "00:30") setMinutes(0.5);
+    else if (val === "01:00") setMinutes(1);
+    else if (val === "02:00") setMinutes(2);
+    else if (val === "05:00") setMinutes(5);
+    else if (val === "10:00") setMinutes(10);
+    else if (val === "15:00") setMinutes(15);
+    else if (val === "30:00") setMinutes(30);
+    else if (val === "01:00:00") setMinutes(60);
+    else if (val === "02:00:00") setMinutes(120);
+    else if (val === "04:00:00") setMinutes(240);
+    onClose();
+  };
+
+  return (
+    <div className="timer-popover" onClick={(e) => e.stopPropagation()}>
+      <div className="timer-tabs">
+        <button
+          className={`timer-tab ${timeMode === "timer" ? "active" : ""}`}
+          onClick={() => setTimeMode("timer")}
+        >
+          TIMER
+        </button>
+        <button
+          className={`timer-tab ${timeMode === "clock" ? "active" : ""}`}
+          onClick={() => setTimeMode("clock")}
+        >
+          TIME
+        </button>
+      </div>
+
+      <div className={`timer-grid ${mobile ? "" : "grid-4"}`}>
+        {presets.map((p) => (
+          <button
+            key={p}
+            className={`timer-pill ${selectedTimerPreset === p ? "active" : ""}`}
+            onClick={() => handleSelect(p)}
+          >
+            {p}
+          </button>
+        ))}
+      </div>
+
+      <button className="timer-manual-btn" onClick={onClose}>
+        Set manually
+      </button>
     </div>
   );
 }
@@ -971,9 +1410,18 @@ function StakeBox({ mobile = false }: { mobile?: boolean }) {
   );
 }
 
-/* ---------------- Time Box with Working SWITCH TIME ---------------- */
+/* ---------------- Time Box with Working SWITCH TIME (Screenshots 1 & 7) ---------------- */
 function TimeBox({ mobile = false }: { mobile?: boolean }) {
-  const { now, minutes, setMinutes, timeMode, toggleTimeMode } = useT();
+  const {
+    now,
+    minutes,
+    setMinutes,
+    timeMode,
+    toggleTimeMode,
+    selectedTimerPreset,
+    timerPopoverOpen,
+    setTimerPopoverOpen,
+  } = useT();
 
   const handleDecrease = () => {
     setMinutes((m) => Math.max(1, m - 1));
@@ -985,52 +1433,81 @@ function TimeBox({ mobile = false }: { mobile?: boolean }) {
 
   const timeDisplay = useMemo(() => {
     if (timeMode === "timer") {
-      return `00:${pad(minutes)}:00`;
+      return selectedTimerPreset.includes(":") &&
+        selectedTimerPreset.split(":").length === 3
+        ? selectedTimerPreset
+        : `00:${selectedTimerPreset}`;
     }
-    // Clock expiration mode
     if (now === null) return mobile ? "19:10" : "19:56";
     const d = new Date(now + minutes * 60000);
     return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  }, [timeMode, minutes, now, mobile]);
+  }, [timeMode, selectedTimerPreset, minutes, now, mobile]);
 
   return (
-    <div className={mobile ? "time-box mobile" : "time-box"}>
-      <span className="field-label">Time</span>
-      <ScreenButton aria-label="Decrease time" onClick={handleDecrease}>
+    <div
+      className={mobile ? "time-box mobile relative" : "time-box relative"}
+      onClick={() => setTimerPopoverOpen((o) => !o)}
+    >
+      <span className="field-label">
+        {timeMode === "timer" ? "Timer" : "Time"}
+      </span>
+      <ScreenButton
+        aria-label="Decrease time"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleDecrease();
+        }}
+      >
         <Minus size={mobile ? 13 : 15} />
       </ScreenButton>
       <strong>{timeDisplay}</strong>
-      <ScreenButton aria-label="Increase time" onClick={handleIncrease}>
+      <ScreenButton
+        aria-label="Increase time"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleIncrease();
+        }}
+      >
         <Plus size={mobile ? 14 : 16} />
       </ScreenButton>
       <span
         className="switch-link"
-        onClick={toggleTimeMode}
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleTimeMode();
+        }}
         role="button"
         tabIndex={0}
       >
         SWITCH TIME
       </span>
+
+      {timerPopoverOpen && (
+        <TimerPresetsPopover
+          mobile={mobile}
+          onClose={() => setTimerPopoverOpen(false)}
+        />
+      )}
     </div>
   );
 }
 
-/* ---------------- Action Buttons (Buy & Sell) ---------------- */
+/* ---------------- Action Buttons (Buy & Sell with Circular Arrows) ---------------- */
 function ActionButtons() {
   const { placeTrade } = useT();
   return (
     <div className="trade-actions">
       <ScreenButton className="buy" onClick={() => placeTrade("up")}>
-        Buy
+        Buy <span>↑</span>
       </ScreenButton>
       <ScreenButton className="sell" onClick={() => placeTrade("down")}>
-        Sell
+        Sell <span>↓</span>
       </ScreenButton>
     </div>
   );
 }
 
-/* ---------------- Trades History Panel ---------------- */
+/* ---------------- Trades History Panel (Screenshot 1) ---------------- */
 function TradesList() {
   const { trades, account, now } = useT();
   const list = trades.filter((t) => t.account === account);
@@ -1113,10 +1590,10 @@ function TradePanel() {
           </div>
         </div>
 
-        {/* Time input */}
+        {/* Time input with popup */}
         <TimeBox />
 
-        {/* Investment input */}
+        {/* Investment input with switch */}
         <StakeBox />
 
         {/* Payout calculation */}
@@ -1136,59 +1613,370 @@ function TradePanel() {
   );
 }
 
+/* ---------------- Desktop SubNav (Screenshots 3, 4, 5) ---------------- */
+function DesktopSubNav() {
+  const { currentView, setCurrentView } = useT();
+
+  return (
+    <div className="pages-subnav">
+      <div className="subnav-tabs">
+        <button
+          className={`subnav-tab ${currentView === "withdrawal" ? "active" : ""}`}
+          onClick={() => setCurrentView("withdrawal")}
+        >
+          Withdrawal
+        </button>
+        <button
+          className={`subnav-tab ${currentView === "payments" ? "active" : ""}`}
+          onClick={() => setCurrentView("payments")}
+        >
+          Payments
+        </button>
+        <button
+          className={`subnav-tab ${currentView === "trading" ? "active" : ""}`}
+          onClick={() => setCurrentView("trading")}
+        >
+          Trades
+        </button>
+        <button
+          className={`subnav-tab ${currentView === "account" ? "active" : ""}`}
+          onClick={() => setCurrentView("account")}
+        >
+          My account
+        </button>
+        <button className="subnav-tab">Market</button>
+        <button className="subnav-tab">Tournaments</button>
+        <button className="subnav-tab">Analytics</button>
+      </div>
+
+      {currentView === "payments" ? (
+        <div className="subnav-pagination">
+          <button>
+            <ChevronDown size={12} className="rotate-90 inline" /> Prev
+          </button>
+          <span>1/2</span>
+          <button>
+            Next <ChevronDown size={12} className="-rotate-90 inline" />
+          </button>
+        </div>
+      ) : (
+        <div className="subnav-info">
+          <div>
+            My current currency: <b>$ USD</b> <em>CHANGE</em>
+          </div>
+          <div>Available for withdrawal</div>
+          <div>In the account</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- Desktop "My account" View (Screenshot 3) ---------------- */
+function DesktopAccountView() {
+  return (
+    <div className="desktop-page-container">
+      <DesktopSubNav />
+      <div className="account-page-grid">
+        {/* Left Column: Personal Data */}
+        <div>
+          <div className="account-section-title">Personal data:</div>
+          <div className="avatar-card">
+            <BullAvatar />
+            <div className="avatar-info">
+              <div className="flex items-center gap-2">
+                <b>trader.demo@test.com</b>
+                <Trash2
+                  size={15}
+                  className="text-muted-foreground hover:text-red-500 cursor-pointer"
+                />
+              </div>
+              <span>ID: 10482910</span>
+              <span className="verified-tag">
+                <Check size={14} strokeWidth={3} /> Verified
+              </span>
+            </div>
+          </div>
+
+          <div className="custom-field">
+            <span className="field-tag">Nickname</span>
+            <span>TEST TRADER</span>
+          </div>
+
+          <div className="custom-field">
+            <span className="field-tag">First Name</span>
+            <span>Demo</span>
+          </div>
+
+          <div className="custom-field">
+            <span className="field-tag">Last Name</span>
+            <span>User</span>
+          </div>
+
+          <div className="custom-field">
+            <span className="field-tag">Date of birth</span>
+            <span>01/01/1995</span>
+            <ChevronDown size={16} />
+          </div>
+
+          <div className="custom-field">
+            <span className="field-tag">Email</span>
+            <span>trader.demo@test.com</span>
+            <span className="text-green-500 text-xs font-bold">Verified</span>
+          </div>
+        </div>
+
+        {/* Right Column: Security */}
+        <div>
+          <div className="account-section-title">Security:</div>
+
+          <div className="security-row">
+            <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center text-black font-bold text-xs mt-0.5">
+              ✓
+            </div>
+            <div>
+              <div className="text-white font-bold text-sm">
+                Two-step verification
+              </div>
+              <div className="text-muted-foreground text-xs flex items-center gap-1.5 mt-0.5">
+                Receiving codes via Email{" "}
+                <Pencil size={12} className="text-blue-500" />
+              </div>
+            </div>
+          </div>
+
+          <div className="security-switch-row">
+            <span>To enter the platform</span>
+            <div className="pending-switch active">
+              <div className="pending-switch-knob" />
+            </div>
+          </div>
+
+          <div className="security-switch-row">
+            <span>To withdraw funds</span>
+            <div className="pending-switch active">
+              <div className="pending-switch-knob" />
+            </div>
+          </div>
+
+          <div className="mt-6 flex items-start gap-3">
+            <Lock size={18} className="text-muted-foreground mt-0.5" />
+            <div>
+              <div className="text-white font-bold text-sm">Password</div>
+              <div className="text-muted-foreground text-xs mt-0.5">
+                Change your account password
+              </div>
+              <span className="text-blue-500 text-xs font-bold mt-2 inline-block cursor-pointer hover:underline">
+                Change
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Desktop "Payments" View (Screenshot 4) ---------------- */
+function DesktopPaymentsView() {
+  return (
+    <div className="desktop-page-container">
+      <DesktopSubNav />
+      <div className="payments-table-container">
+        <table className="payments-table">
+          <thead>
+            <tr>
+              <th>Transaction ID</th>
+              <th>Date and time</th>
+              <th>Status</th>
+              <th>Transaction type</th>
+              <th>Payment system</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {PAYMENTS_DATA.map((p) => (
+              <tr key={p.id}>
+                <td className="font-semibold">{p.id}</td>
+                <td className="text-muted-foreground text-xs">{p.dateTime}</td>
+                <td>
+                  {p.status === "Successed" ? (
+                    <span className="status-pill success">
+                      <Check size={14} strokeWidth={3} /> Successed
+                    </span>
+                  ) : (
+                    <span className="status-pill failed">
+                      <X size={14} strokeWidth={3} /> Failed
+                    </span>
+                  )}
+                </td>
+                <td className="text-muted-foreground">{p.type}</td>
+                <td>{p.system}</td>
+                <td
+                  className={
+                    p.status === "Successed"
+                      ? "text-green-500 font-bold"
+                      : "text-muted-foreground font-bold"
+                  }
+                >
+                  {p.amount}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Desktop "Withdrawal" View (Screenshot 5) ---------------- */
+function DesktopWithdrawalView() {
+  return (
+    <div className="desktop-page-container">
+      <DesktopSubNav />
+      <div className="withdrawal-page-grid">
+        <div className="withdrawal-balances">
+          <div className="account-section-title">Account:</div>
+          <div className="withdrawal-balance-item">
+            <small>In the account:</small>
+            <b>31,626.40$</b>
+          </div>
+          <div className="withdrawal-balance-item mt-4">
+            <small>Available for withdrawal:</small>
+            <b>31,626.40$</b>
+          </div>
+        </div>
+
+        <div>
+          <div className="account-section-title">Withdrawal:</div>
+
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="custom-field mb-0">
+              <span className="field-tag">Amount</span>
+              <span className="font-bold">10</span>
+              <span className="text-muted-foreground text-xs">USD</span>
+            </div>
+            <div className="custom-field mb-0">
+              <span className="field-tag">Payment method</span>
+              <span className="flex items-center gap-1.5 font-bold">
+                <span className="text-yellow-500 font-bold">🔸</span> Binance
+                Pay
+              </span>
+              <ChevronDown size={16} />
+            </div>
+          </div>
+
+          <div className="custom-field">
+            <span className="field-tag">First name</span>
+            <span>Demo</span>
+          </div>
+
+          <div className="custom-field">
+            <span className="field-tag">Last name</span>
+            <span>User</span>
+          </div>
+
+          <div className="custom-field">
+            <span className="field-tag">Receive type</span>
+            <span className="text-muted-foreground">Select</span>
+            <ChevronDown size={16} />
+          </div>
+
+          <button className="confirm-btn">
+            Confirm <ArrowRight size={16} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ---------------- Desktop Screen Composition ---------------- */
 function DesktopScreen() {
+  const { currentView } = useT();
+
   return (
     <div className="desktop-screen">
       <DesktopSidebar />
       <DesktopHeader />
-      <main className="desktop-main">
-        <PairTabs />
-        <div className="chart-container">
-          <ChartGrid />
-          <div className="sentiment">
-            <b>34%</b>
-            <span>
-              <i />
-              <i />
-            </span>
-            <b>66%</b>
-          </div>
-        </div>
-      </main>
-      <TradePanel />
+
+      {currentView === "trading" && (
+        <>
+          <main className="desktop-main">
+            <PairTabs />
+            <div className="chart-container">
+              <ChartGrid />
+              <div className="sentiment">
+                <b>34%</b>
+                <span>
+                  <i />
+                  <i />
+                </span>
+                <b>66%</b>
+              </div>
+            </div>
+          </main>
+          <TradePanel />
+        </>
+      )}
+
+      {currentView === "account" && <DesktopAccountView />}
+      {currentView === "payments" && <DesktopPaymentsView />}
+      {currentView === "withdrawal" && <DesktopWithdrawalView />}
+      {currentView === "help" && <DesktopAccountView />}
     </div>
   );
 }
 
 /* ---------------- Mobile Header & Navigation ---------------- */
 function MobileHeader() {
+  const { setCurrentView } = useT();
   return (
     <header className="mobile-header">
       <AccountBlock mobile />
       <NotificationBadge />
-      <ScreenButton className="deposit">Deposit</ScreenButton>
+      <ScreenButton
+        className="deposit"
+        onClick={() => setCurrentView("withdrawal")}
+      >
+        Deposit
+      </ScreenButton>
     </header>
   );
 }
 
 function MobileNav() {
+  const { currentView, setCurrentView } = useT();
+
   return (
     <nav className="mobile-nav">
-      <span title="Chart">
+      <span
+        onClick={() => setCurrentView("trading")}
+        className={currentView === "trading" ? "text-blue-500" : ""}
+      >
         <ImageIcon size={20} />
       </span>
-      <span title="Help">
+      <span
+        onClick={() => setCurrentView("help")}
+        className={currentView === "help" ? "text-blue-500" : ""}
+      >
         <CircleHelp size={20} />
       </span>
-      <span title="Profile">
+      <span
+        onClick={() => setCurrentView("account")}
+        className={currentView === "account" ? "text-blue-500" : ""}
+      >
         <UserRound size={20} />
       </span>
-      <span title="Tournaments">
+      <span>
         <Trophy size={20} />
         <b>4</b>
       </span>
-      <span title="More">
+      <span
+        onClick={() => setCurrentView("more")}
+        className={currentView === "more" ? "text-blue-500" : ""}
+      >
         <MoreHorizontal size={22} />
         <b>2</b>
       </span>
@@ -1217,11 +2005,7 @@ function MobileTradePanel() {
     <section className="mobile-trade-panel">
       {/* Row 1: Pair selection & Pending toggle */}
       <div className="mobile-pair-row">
-        <div
-          className="mobile-pair"
-          onClick={cyclePair}
-          title="Click to cycle pair"
-        >
+        <div className="mobile-pair" onClick={cyclePair}>
           <PairFlags flags={activePair.flags} compact />
           <b>{activePair.name}</b>
           <strong>{Math.round(activePair.rate * 100)}%</strong>
@@ -1254,13 +2038,274 @@ function MobileTradePanel() {
   );
 }
 
-/* ---------------- Mobile Screen (100% Fixed, No Scroll) ---------------- */
+/* ---------------- Mobile "My account" View (Screenshot 9) ---------------- */
+function MobileAccountView() {
+  return (
+    <div className="mobile-view-wrapper">
+      <div className="mobile-dropdown-header">
+        <span>My account</span>
+        <ChevronDown size={16} />
+      </div>
+
+      <div className="px-3 pb-4">
+        <div className="account-section-title text-sm">Personal data:</div>
+        <div className="avatar-card mb-4">
+          <BullAvatar />
+          <div className="avatar-info">
+            <div className="flex items-center gap-2">
+              <b className="text-sm">trader.demo@test.com</b>
+              <Trash2 size={14} className="text-muted-foreground" />
+            </div>
+            <span className="text-xs">ID: 10482910</span>
+            <span className="verified-tag text-xs">
+              <Check size={12} strokeWidth={3} /> Verified
+            </span>
+          </div>
+        </div>
+
+        <div className="custom-field">
+          <span className="field-tag">Nickname</span>
+          <span>TEST TRADER</span>
+        </div>
+
+        <div className="custom-field">
+          <span className="field-tag">First Name</span>
+          <span>Demo</span>
+        </div>
+
+        <div className="custom-field">
+          <span className="field-tag">Last Name</span>
+          <span>User</span>
+        </div>
+
+        <div className="custom-field">
+          <span className="field-tag">Date of birth</span>
+          <span>01/01/1995</span>
+          <ChevronDown size={14} />
+        </div>
+
+        <div className="custom-field">
+          <span className="field-tag">Email</span>
+          <span className="truncate pr-2 text-xs">trader.demo@test.com</span>
+          <span className="text-green-500 text-xs font-bold">Verified</span>
+        </div>
+
+        <div className="custom-field">
+          <span className="field-tag">Country</span>
+          <span>International</span>
+          <ChevronDown size={14} />
+        </div>
+
+        <div className="custom-field">
+          <span className="field-tag">Address</span>
+          <span>Sample Street 101, Test City</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Mobile "Payments" View (Screenshot 12) ---------------- */
+function MobilePaymentsView() {
+  return (
+    <div className="mobile-view-wrapper">
+      <div className="mobile-dropdown-header">
+        <span>Payments</span>
+        <ChevronDown size={16} />
+      </div>
+
+      <div className="mobile-payments-list">
+        <div className="mobile-payments-head">
+          <span>Transaction ID</span>
+          <span>Amount</span>
+        </div>
+
+        {PAYMENTS_DATA.map((p) => (
+          <div className="mobile-payment-item" key={p.id}>
+            <div className="mobile-payment-left">
+              <b>{p.id}</b>
+              <small>{p.dateTime}</small>
+              {p.status === "Successed" ? (
+                <span className="status-pill success">
+                  <Check size={13} strokeWidth={3} /> Successed
+                </span>
+              ) : (
+                <span className="status-pill failed">
+                  <X size={13} strokeWidth={3} /> Failed
+                </span>
+              )}
+            </div>
+            <div className="mobile-payment-right">
+              <b>{p.amount}</b>
+              <small>{p.system}</small>
+              <small className="text-muted-foreground">{p.type}</small>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Mobile "More" View (Screenshots 8 & 11) ---------------- */
+function MobileMoreView() {
+  const { setCurrentView } = useT();
+
+  return (
+    <div className="mobile-view-wrapper">
+      <div className="mobile-more-view">
+        <div className="mobile-more-header">
+          <span>More</span>
+          <X
+            size={20}
+            className="text-muted-foreground cursor-pointer"
+            onClick={() => setCurrentView("trading")}
+          />
+        </div>
+
+        <div className="mobile-more-card">
+          <ShoppingBag size={18} />
+          <span>Market</span>
+          <span className="card-badge">2</span>
+          <ChevronRight size={16} />
+        </div>
+
+        <div className="mobile-more-card">
+          <PieChart size={18} />
+          <span>Analytics</span>
+          <ChevronRight size={16} />
+        </div>
+
+        <div className="mobile-more-card">
+          <Briefcase size={18} />
+          <span>TOP</span>
+          <ChevronRight size={16} />
+        </div>
+
+        <div className="mobile-more-card">
+          <Radio size={18} />
+          <span>Signals</span>
+          <ChevronRight size={16} />
+        </div>
+
+        <div className="mobile-more-links">
+          <div
+            className="mobile-more-link"
+            onClick={() => setCurrentView("withdrawal")}
+          >
+            Deposit
+          </div>
+          <div
+            className="mobile-more-link"
+            onClick={() => setCurrentView("withdrawal")}
+          >
+            Withdrawal
+          </div>
+          <div
+            className="mobile-more-link"
+            onClick={() => setCurrentView("payments")}
+          >
+            Payments
+          </div>
+          <div
+            className="mobile-more-link"
+            onClick={() => setCurrentView("trading")}
+          >
+            Trades
+          </div>
+        </div>
+
+        <div className="mobile-more-footer">
+          <div className="footer-link-blue">
+            <Settings size={18} />
+            <span>Settings</span>
+          </div>
+          <div className="footer-link-red">
+            <LogOut size={18} />
+            <span>Logout</span>
+          </div>
+        </div>
+
+        <button className="join-us-btn">
+          <MessageSquare size={16} />
+          <span>Join Us</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Mobile "Help" View (Screenshot 10) ---------------- */
+function MobileHelpView() {
+  const { setCurrentView } = useT();
+
+  return (
+    <div className="mobile-view-wrapper">
+      <div className="mobile-help-view">
+        <div className="mobile-more-header">
+          <span>Help</span>
+          <X
+            size={20}
+            className="text-muted-foreground cursor-pointer"
+            onClick={() => setCurrentView("trading")}
+          />
+        </div>
+
+        <div className="help-item">
+          <div className="help-item-icon">
+            <LayoutGrid size={28} />
+          </div>
+          <b>FAQ</b>
+          <span>Open the database</span>
+        </div>
+
+        <div className="help-item">
+          <div className="help-item-icon">
+            <GraduationCap size={30} />
+          </div>
+          <b>Tutorials</b>
+          <span>Use the hints</span>
+        </div>
+
+        <div className="help-item">
+          <div className="help-item-icon">
+            <Headphones size={28} />
+          </div>
+          <b>Support</b>
+          <span>Submit a ticket</span>
+        </div>
+
+        <div className="help-bottom-bubble">
+          <div className="help-q-mark">?</div>
+          <span>Didn't find an answer to your question?</span>
+          <a>Contact support</a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Mobile Screen (100% Fixed, Zero Scroll) ---------------- */
 function MobileScreen() {
+  const { currentView } = useT();
+
   return (
     <div className="mobile-screen">
       <MobileHeader />
-      <ChartGrid mobile />
-      <MobileTradePanel />
+
+      {currentView === "trading" && (
+        <>
+          <ChartGrid mobile />
+          <MobileTradePanel />
+        </>
+      )}
+
+      {currentView === "account" && <MobileAccountView />}
+      {currentView === "payments" && <MobilePaymentsView />}
+      {currentView === "withdrawal" && <MobilePaymentsView />}
+      {currentView === "more" && <MobileMoreView />}
+      {currentView === "help" && <MobileHelpView />}
+
       <MobileNav />
       <div className="phone-home">
         <i />

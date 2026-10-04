@@ -1034,7 +1034,7 @@ button {
   padding: 0 16px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   font-size: 15px;
   font-weight: 700;
   color: #fff;
@@ -1796,4 +1796,686 @@ button {
   .account-menu-links hr {
     display: none;
   }
+}
+
+/* ==========================================================================
+   TIMER PRESETS POPOVER (Screenshots 1 & 7)
+   ========================================================================== */
+.timer-popover {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  width: 250px;
+  background: oklch(0.2 0.026 273);
+  border: 1px solid oklch(0.35 0.02 272);
+  border-radius: 8px;
+  padding: 10px;
+  z-index: 60;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+.timer-tabs {
+  display: flex;
+  background: oklch(0.16 0.02 274);
+  border-radius: 5px;
+  padding: 3px;
+  margin-bottom: 8px;
+  gap: 3px;
+}
+.timer-tab {
+  flex: 1;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 4px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: all 0.15s;
+}
+.timer-tab.active {
+  background: var(--blue);
+  color: #fff;
+}
+.timer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  margin-bottom: 8px;
+}
+.timer-grid.grid-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+.timer-pill {
+  height: 32px;
+  display: grid;
+  place-items: center;
+  background: oklch(0.27 0.025 273);
+  color: oklch(0.88 0.01 270);
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.timer-pill:hover {
+  background: oklch(0.34 0.03 273);
+  color: #fff;
+}
+.timer-pill.active {
+  background: var(--blue);
+  color: #fff;
+}
+.timer-manual-btn {
+  width: 100%;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  background: oklch(0.27 0.025 273);
+  color: oklch(0.9 0.01 270);
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.timer-manual-btn:hover {
+  background: oklch(0.34 0.03 273);
+  color: #fff;
+}
+
+/* ==========================================================================
+   DESKTOP MORE MENU (Screenshot 2)
+   ========================================================================== */
+.desktop-more-menu {
+  position: absolute;
+  left: 56px;
+  top: 100px;
+  width: 220px;
+  background: oklch(0.18 0.022 274);
+  border: 1px solid oklch(0.3 0.02 272);
+  border-radius: 6px;
+  padding: 12px 10px;
+  z-index: 60;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6);
+}
+.desktop-more-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 6px 10px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  border-bottom: 1px solid oklch(0.26 0.02 272);
+  margin-bottom: 8px;
+}
+.desktop-more-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: oklch(0.23 0.026 273);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.desktop-more-item:hover {
+  background: oklch(0.28 0.028 273);
+}
+.desktop-more-item svg:last-child {
+  margin-left: auto;
+  color: var(--muted-foreground);
+}
+.desktop-more-item .item-badge {
+  margin-left: auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--blue);
+  font-size: 10px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+
+/* ==========================================================================
+   MOBILE TRADES DRAWER (Screenshot 6)
+   ========================================================================== */
+.mobile-trades-drawer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: oklch(0.18 0.022 274);
+  border-top: 1px solid oklch(0.3 0.02 272);
+  z-index: 30;
+  padding: 0 10px 10px;
+  max-height: 52%;
+  overflow-y: auto;
+  box-shadow: 0 -8px 25px rgba(0, 0, 0, 0.65);
+}
+.mobile-trades-drawer .trades-head {
+  position: sticky;
+  top: 0;
+  background: oklch(0.18 0.022 274);
+  z-index: 2;
+  border-bottom: 1px solid oklch(0.28 0.02 272);
+}
+
+/* ==========================================================================
+   DESKTOP SUBNAV & SECONDARY PAGES (Screenshots 3, 4, 5)
+   ========================================================================== */
+.desktop-page-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  background: var(--background);
+}
+.pages-subnav {
+  height: 48px;
+  background: oklch(0.16 0.02 274);
+  border-bottom: 1px solid oklch(0.26 0.02 272);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  flex-shrink: 0;
+}
+.subnav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.subnav-tab {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.subnav-tab:hover {
+  color: #fff;
+}
+.subnav-tab.active {
+  background: oklch(0.26 0.028 273);
+  color: #fff;
+}
+.subnav-info {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.subnav-info b {
+  color: #fff;
+}
+.subnav-info em {
+  font-style: normal;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: var(--blue);
+  color: #fff;
+  margin-left: 6px;
+  cursor: pointer;
+}
+.subnav-pagination {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.subnav-pagination button {
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: oklch(0.26 0.028 273);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Account Page Layout (Screenshot 3) */
+.account-page-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  padding: 24px 30px;
+  max-width: 1100px;
+}
+.account-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 16px;
+}
+.avatar-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.bull-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #000;
+  border: 2px solid oklch(0.35 0.02 272);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+.avatar-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.avatar-info b {
+  font-size: 15px;
+  color: #fff;
+}
+.avatar-info span {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.verified-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 700;
+}
+.custom-field {
+  position: relative;
+  height: 48px;
+  border: 1px solid oklch(0.34 0.02 272);
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  margin-bottom: 18px;
+  background: oklch(0.2 0.025 273 / 0.5);
+}
+.custom-field .field-tag {
+  position: absolute;
+  left: 12px;
+  top: -8px;
+  padding: 0 6px;
+  background: oklch(0.185 0.025 274);
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+}
+.custom-field span {
+  font-size: 13px;
+  color: #fff;
+  font-weight: 600;
+}
+.custom-field svg {
+  color: var(--muted-foreground);
+}
+
+/* Security Column (Screenshot 3) */
+.security-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.security-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  font-size: 13px;
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Payments Table Layout (Screenshot 4) */
+.payments-table-container {
+  padding: 20px 30px;
+  overflow-x: auto;
+}
+.payments-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.payments-table th {
+  text-align: left;
+  padding: 12px 14px;
+  color: var(--muted-foreground);
+  font-weight: 500;
+  border-bottom: 1px solid oklch(0.26 0.02 272);
+}
+.payments-table th:last-child {
+  text-align: right;
+}
+.payments-table td {
+  padding: 14px;
+  border-bottom: 1px solid oklch(0.24 0.02 272 / 0.6);
+  color: #fff;
+}
+.payments-table td:last-child {
+  text-align: right;
+  font-weight: 700;
+  color: var(--green);
+}
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 12px;
+}
+.status-pill.success {
+  color: var(--green);
+}
+.status-pill.failed {
+  color: var(--red);
+}
+
+/* Withdrawal Page Layout (Screenshot 5) */
+.withdrawal-page-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 40px;
+  padding: 24px 30px;
+  max-width: 900px;
+}
+.withdrawal-balances {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.withdrawal-balance-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.withdrawal-balance-item small {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.withdrawal-balance-item b {
+  font-size: 20px;
+  color: #fff;
+}
+.confirm-btn {
+  height: 44px;
+  border-radius: 5px;
+  background: var(--blue);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  margin-top: 14px;
+  width: 180px;
+  transition: filter 0.15s;
+}
+.confirm-btn:hover {
+  filter: brightness(1.1);
+}
+
+/* ==========================================================================
+   MOBILE VIEWS (Screenshots 8, 9, 10, 11, 12)
+   ========================================================================== */
+.mobile-view-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  background: var(--background);
+}
+.mobile-dropdown-header {
+  height: 40px;
+  margin: 10px 12px 14px;
+  padding: 0 14px;
+  background: oklch(0.24 0.028 273);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.mobile-dropdown-header svg {
+  color: var(--muted-foreground);
+}
+
+/* Mobile More Screen (Screenshots 8 & 11) */
+.mobile-more-view {
+  padding: 16px 14px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mobile-more-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 6px;
+}
+.mobile-more-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: oklch(0.22 0.026 273);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.mobile-more-card:hover {
+  background: oklch(0.26 0.028 273);
+}
+.mobile-more-card .card-badge {
+  margin-left: auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+.mobile-more-card svg:last-child {
+  color: var(--muted-foreground);
+}
+.mobile-more-links {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 6px;
+}
+.mobile-more-link {
+  padding: 10px 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: oklch(0.85 0.01 270);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.mobile-more-link:hover {
+  color: #fff;
+}
+.mobile-more-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 6px 10px;
+  border-top: 1px solid oklch(0.26 0.02 272);
+}
+.footer-link-blue {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--blue);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.footer-link-red {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--red);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.join-us-btn {
+  height: 42px;
+  border-radius: 6px;
+  background: oklch(0.28 0.06 250);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  margin-top: 6px;
+}
+
+/* Mobile Help Screen (Screenshot 10) */
+.mobile-help-view {
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+}
+.help-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  padding: 24px 0;
+  border-bottom: 1px solid oklch(0.26 0.02 272 / 0.6);
+}
+.help-item-icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: var(--blue);
+  margin-bottom: 4px;
+}
+.help-item b {
+  font-size: 16px;
+  color: #fff;
+}
+.help-item span {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.help-bottom-bubble {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 28px 0 10px;
+  gap: 6px;
+}
+.help-q-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--red);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+.help-bottom-bubble span {
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+.help-bottom-bubble a {
+  color: var(--blue);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Mobile Payments Screen (Screenshot 12) */
+.mobile-payments-list {
+  padding: 0 12px 20px;
+  display: flex;
+  flex-direction: column;
+}
+.mobile-payments-head {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 4px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  border-bottom: 1px solid oklch(0.26 0.02 272);
+}
+.mobile-payment-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 14px 4px;
+  border-bottom: 1px solid oklch(0.24 0.02 272 / 0.5);
+  font-size: 13px;
+}
+.mobile-payment-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mobile-payment-left b {
+  color: #fff;
+}
+.mobile-payment-left small {
+  color: var(--muted-foreground);
+}
+.mobile-payment-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+.mobile-payment-right b {
+  color: var(--green);
+  font-weight: 700;
+}
+.mobile-payment-right small {
+  color: var(--muted-foreground);
 }
