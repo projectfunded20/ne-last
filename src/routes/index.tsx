@@ -3410,7 +3410,7 @@ function MobileMoreView() {
           className="mobile-more-card"
           onClick={() => setCurrentView("trading")}
         >
-          <ShoppingBag size={18} />
+          <span className="text-base">💰</span>
           <span>Market</span>
           <span className="card-badge">2</span>
           <ChevronRight size={16} />
@@ -3442,50 +3442,54 @@ function MobileMoreView() {
 
         <div className="mobile-more-links">
           <div
-            className="link-row"
+            className="mobile-more-link"
             onClick={() => setDepositModalStep("methods")}
           >
-            <span>Deposit</span>
-            <ChevronRight size={16} />
+            Deposit
           </div>
           <div
-            className="link-row"
+            className="mobile-more-link"
             onClick={() => setCurrentView("withdrawal")}
           >
-            <span>Withdrawal</span>
-            <ChevronRight size={16} />
+            Withdrawal
           </div>
           <div
-            className="link-row"
+            className="mobile-more-link"
             onClick={() => setCurrentView("payments")}
           >
-            <span>Payments</span>
-            <ChevronRight size={16} />
+            Payments
           </div>
           <div
-            className="link-row"
+            className="mobile-more-link"
             onClick={() => setCurrentView("trading")}
           >
-            <span>Trades</span>
-            <ChevronRight size={16} />
+            Trades
           </div>
         </div>
 
         <div className="mobile-more-footer">
           <div
-            className="footer-btn cursor-pointer"
+            className="footer-link-blue"
             onClick={() => setSettingsModalOpen(true)}
           >
             <Settings size={18} />
             <span>Settings</span>
           </div>
           <div
-            className="footer-btn cursor-pointer"
+            className="footer-link-red"
             onClick={() => setCurrentView("trading")}
           >
             <LogOut size={18} />
             <span>Logout</span>
           </div>
+        </div>
+
+        <div
+          className="join-us-btn"
+          onClick={() => setCurrentView("help")}
+        >
+          <MessageSquare size={16} />
+          <span>Join Us</span>
         </div>
       </div>
     </div>
